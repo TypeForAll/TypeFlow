@@ -1,4 +1,6 @@
 <script>
+"use strict";
+
 const statusText = document.getElementById("status");
 const heardText = document.getElementById("heard");
 const talkButton = document.getElementById("talk");
@@ -10,31 +12,379 @@ let speaking = true;
 let recognition = null;
 let listening = false;
 let searching = false;
+let finishing = false;
 let finalWords = "";
 let interimWords = "";
+let sessionId = 0;
 let listenTimer = null;
-let resultTimer = null;
-let searchTimer = null;
-let sessionNumber = 0;
+let finishTimer = null;
+let navigationTimer = null;
 
-// Text-to-speech
+// Cancel pending timers.
+function clearVoiceTimers() {
+    clearTimeout(listenTimer);
+    clearTimeout(finishTimer);
+    clearTimeout(navigationTimer);
+}
+
+// Text-to-speech.
 function say(text) {
     if (!speaking || !("speechSynthesis" in window)) return;
 
     speechSynthesis.cancel();
 
-    const message = new SpeechSynthesisUtterance(text);
-    message.lang = "en-US";
-    message.rate = 1.05;
-    speechSynthesis.speak(message);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = 1.05;
+
+    speechSynthesis.speak(utterance);
 }
 
-// Speak labels when hovering over them
+// Speaking ON/OFF.
+toggleButton.addEventListener("click", () => {
+    speaking = !speaking;
+
+    if ("speechSynthesis" in window) {
+        speechSynthesis.cancel();
+    }
+
+    toggleButton.textContent = speaking
+        ? "🔊 Speaking: ON"
+        : "🔇 Speaking: OFF";
+
+    if (speaking) say("Speaking on");
+});
+
+// Return the best recognized phrase.
+function getRecognizedWords() {
+    return (finalWords || interimWords || "").trim();
+}
+
+// Reset Talk button.
+function resetTalkButton() {
+    listening = false;
+    finishing = false;
+    talkButton.disabled = false;
+    talkButton.textContent = "🎤 Talk";
+}
+
+// Search YouTube once.
+function searchYouTube(query) {
+    query = (query || "").trim();
+
+    if (!query || searching) return;
+
+    searching = true;
+    listening = false;
+    finishing = false;
+
+    clearVoiceTimers();
+    resetTalkButton();
+
+    if (recognition) {
+        try {
+            recognition.abort();
+        } catch (error) {}
+    }
+
+    if ("speechSynthesis" in window) {
+        speechSynthesis.cancel();
+    }
+
+    statusText.textContent = "Searching YouTube...";
+    heardText.textContent = "You said: " + query;
+
+    const url =
+        "https://www.youtube.com/results?search_query=" +
+        encodeURIComponent(query);
+
+    function navigate() {
+        if (!searching) return;
+
+        searching = false;
+        window.location.href = url;
+    }
+
+    if (speaking && "speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance("Searching!");
+        utterance.lang = "en-US";
+        utterance.rate = 1.1;
+        utterance.onend = navigate;
+        utterance.onerror = navigate;
+
+        speechSynthesis.speak(utterance);
+
+        // Never get stuck waiting for speech synthesis.
+        navigationTimer = setTimeout(navigate, 1500);
+    } else {
+        navigate();
+    }
+}
+
+// Stop button intentionally cancels everything.
+stopButton.addEventListener("click", () => {
+    sessionId++;
+    searching = false;
+    listening = false;
+    finishing = false;
+    finalWords = "";
+    interimWords = "";
+
+    clearVoiceTimers();
+
+    if (recognition) {
+        try {
+            recognition.abort();
+        } catch (error) {}
+    }
+
+    if ("speechSynthesis" in window) {
+        speechSynthesis.cancel();
+    }
+
+    resetTalkButton();
+    statusText.textContent = "Stopped.";
+    heardText.textContent = "";
+});
+
+// Typed search.
+document.getElementById("searchForm").addEventListener("submit", event => {
+    event.preventDefault();
+    searchYouTube(searchInput.value);
+});
+
+// Category buttons.
+document.querySelectorAll("[data-query]").forEach(button => {
+    button.addEventListener("click", () => {
+        searchYouTube(button.dataset.query);
+    });
+});
+
+// Voice recognition setup.
+const SpeechRecognitionAPI =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (!SpeechRecognitionAPI) {
+    talkButton.addEventListener("click", () => {
+        statusText.textContent =
+            "Voice recognition isn't supported here. Type your search below.";
+        searchInput.focus();
+    });
+} else {
+    recognition = new SpeechRecognitionAPI();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    // Begin listening.
+    recognition.onstart = () => {
+        listening = true;
+        finishing = false;
+        searching = false;
+        finalWords = "";
+        interimWords = "";
+
+        talkButton.disabled = false;
+        talkButton.textContent = "🎤 Listening...";
+        statusText.textContent =
+            "Listening! Say what you want to watch.";
+        heardText.textContent = "";
+
+        const currentSession = sessionId;
+
+        // Safety timeout in case recognition never ends.
+        listenTimer = setTimeout(() => {
+            if (!listening || currentSession !== sessionId) return;
+
+            const words = getRecognizedWords();
+
+            if (words) {
+                searchYouTube(words);
+            } else {
+                try {
+                    recognition.stop();
+                } catch (error) {}
+
+                resetTalkButton();
+                statusText.textContent =
+                    "Didn't catch that. Tap Talk and try again.";
+            }
+        }, 15000);
+    };
+
+    // Collect recognized words.
+    recognition.onresult = event => {
+        if (searching) return;
+
+        let finals = "";
+        let interim = "";
+
+        for (let i = 0; i < event.results.length; i++) {
+            const result = event.results[i];
+            const phrase = result[0].transcript.trim();
+
+            if (!phrase) continue;
+
+            if (result.isFinal) {
+                finals += phrase + " ";
+            } else {
+                interim += phrase + " ";
+            }
+        }
+
+        if (finals.trim()) {
+            finalWords = finals.trim();
+        }
+
+        if (interim.trim()) {
+            interimWords = interim.trim();
+        }
+
+        const words = getRecognizedWords();
+
+        if (words) {
+            heardText.textContent = "I heard: " + words;
+            statusText.textContent = finishing
+                ? "Finishing your search..."
+                : "Got it! Press Talk again to search.";
+        }
+
+        // Do not navigate from onresult. Let onend handle the final
+        // transcript, avoiding multiple competing searches.
+    };
+
+    // Recognition ended: search the captured words unless Stop was used.
+    recognition.onend = () => {
+        clearTimeout(listenTimer);
+
+        if (searching) return;
+
+        const words = getRecognizedWords();
+
+        if (words && (listening || finishing)) {
+            searchYouTube(words);
+            return;
+        }
+
+        resetTalkButton();
+
+        if (statusText.textContent !== "Stopped.") {
+            statusText.textContent =
+                "Didn't catch that. Tap Talk again or type below.";
+        }
+    };
+
+    // Recognition errors.
+    recognition.onerror = event => {
+        if (searching) return;
+
+        clearTimeout(listenTimer);
+
+        const words = getRecognizedWords();
+
+        // Use words already captured if Safari reports an error.
+        if (words && (listening || finishing)) {
+            searchYouTube(words);
+            return;
+        }
+
+        resetTalkButton();
+
+        const messages = {
+            "not-allowed": "Microphone access was blocked.",
+            "service-not-allowed": "Safari blocked the speech service.",
+            "no-speech": "I didn't hear anything. Try again.",
+            "audio-capture": "Couldn't access the microphone.",
+            "network": "Voice recognition had a network error.",
+            "aborted": "Listening cancelled."
+        };
+
+        statusText.textContent = messages[event.error] ||
+            "Voice search failed. Please try again.";
+    };
+
+    // Talk button.
+    talkButton.addEventListener("click", () => {
+        // Second press: stop listening gracefully and search in onend.
+        if (listening && !finishing) {
+            finishing = true;
+            statusText.textContent = "Finishing your search...";
+            talkButton.textContent = "⏳ Processing...";
+
+            clearTimeout(listenTimer);
+
+            // If words are already available, search them directly.
+            const words = getRecognizedWords();
+
+            if (words) {
+                searchYouTube(words);
+                return;
+            }
+
+            try {
+                recognition.stop();
+            } catch (error) {
+                resetTalkButton();
+                statusText.textContent =
+                    "Couldn't finish listening. Tap Talk to try again.";
+            }
+
+            // Give Safari time to deliver a final transcript.
+            finishTimer = setTimeout(() => {
+                if (!searching && finishing) {
+                    const latestWords = getRecognizedWords();
+
+                    if (latestWords) {
+                        searchYouTube(latestWords);
+                    } else {
+                        resetTalkButton();
+                        statusText.textContent =
+                            "Didn't catch that. Tap Talk and try again.";
+                    }
+                }
+            }, 2500);
+
+            return;
+        }
+
+        // Ignore rapid repeated presses while finishing.
+        if (finishing || talkButton.disabled) return;
+
+        clearVoiceTimers();
+
+        sessionId++;
+        searching = false;
+        finalWords = "";
+        interimWords = "";
+
+        if ("speechSynthesis" in window) {
+            speechSynthesis.cancel();
+        }
+
+        statusText.textContent = "Starting microphone...";
+        heardText.textContent = "";
+        talkButton.disabled = true;
+        talkButton.textContent = "🎤 Starting...";
+
+        try {
+            recognition.start();
+        } catch (error) {
+            resetTalkButton();
+            statusText.textContent =
+                "Couldn't start voice search. Wait a moment and try again.";
+        }
+    });
+}
+
+// Hover-to-speak labels.
 let hoverTimer = null;
 let hoveredItem = null;
 
 document.addEventListener("mouseover", event => {
     const item = event.target.closest("[data-say]");
+
     if (!item || item === hoveredItem || listening || searching) return;
 
     hoveredItem = item;
@@ -55,333 +405,4 @@ document.addEventListener("mouseout", event => {
         clearTimeout(hoverTimer);
     }
 });
-
-// Speaking ON/OFF
-toggleButton.addEventListener("click", () => {
-    speaking = !speaking;
-
-    if ("speechSynthesis" in window) {
-        speechSynthesis.cancel();
-    }
-
-    toggleButton.textContent = speaking
-        ? "🔊 Speaking: ON"
-        : "🔇 Speaking: OFF";
-
-    if (speaking) say("Speaking on");
-});
-
-// Reset listening UI
-function resetTalkButton() {
-    listening = false;
-    talkButton.disabled = false;
-    talkButton.textContent = "🎤 Talk";
-
-    clearTimeout(listenTimer);
-    clearTimeout(resultTimer);
-}
-
-// Search YouTube exactly once
-function searchYouTube(query) {
-    query = (query || "").trim();
-
-    if (!query || searching) return;
-
-    searching = true;
-    listening = false;
-
-    clearTimeout(listenTimer);
-    clearTimeout(resultTimer);
-    clearTimeout(searchTimer);
-
-    talkButton.disabled = false;
-    talkButton.textContent = "🎤 Talk";
-
-    if (recognition) {
-        try {
-            recognition.abort();
-        } catch (error) {}
-    }
-
-    if ("speechSynthesis" in window) {
-        speechSynthesis.cancel();
-    }
-
-    statusText.textContent = "Searching YouTube...";
-    heardText.textContent = "You said: " + query;
-
-    const destination =
-        "https://www.youtube.com/results?search_query=" +
-        encodeURIComponent(query);
-
-    if (speaking && "speechSynthesis" in window) {
-        const message = new SpeechSynthesisUtterance("Searching!");
-        message.lang = "en-US";
-        message.rate = 1.1;
-
-        message.onend = () => {
-            if (searching) window.location.href = destination;
-        };
-
-        message.onerror = () => {
-            if (searching) window.location.href = destination;
-        };
-
-        speechSynthesis.speak(message);
-
-        // Safety timeout in case speech doesn't finish.
-        searchTimer = setTimeout(() => {
-            if (searching) window.location.href = destination;
-        }, 1200);
-    } else {
-        window.location.href = destination;
-    }
-}
-
-// Stop button: intentionally cancels instead of searching.
-stopButton.addEventListener("click", () => {
-    sessionNumber++;
-    clearTimeout(listenTimer);
-    clearTimeout(resultTimer);
-    clearTimeout(searchTimer);
-
-    searching = false;
-    listening = false;
-    finalWords = "";
-    interimWords = "";
-
-    if (recognition) {
-        try {
-            recognition.abort();
-        } catch (error) {}
-    }
-
-    if ("speechSynthesis" in window) {
-        speechSynthesis.cancel();
-    }
-
-    resetTalkButton();
-    statusText.textContent = "Stopped.";
-    heardText.textContent = "";
-});
-
-// Typed search
-document.getElementById("searchForm").addEventListener("submit", event => {
-    event.preventDefault();
-    searchYouTube(searchInput.value);
-});
-
-// Category buttons
-document.querySelectorAll("[data-query]").forEach(button => {
-    button.addEventListener("click", () => {
-        searchYouTube(button.dataset.query);
-    });
-});
-
-// Browser speech recognition
-const SpeechRecognitionAPI =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-if (SpeechRecognitionAPI) {
-    recognition = new SpeechRecognitionAPI();
-
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-        listening = true;
-        searching = false;
-        finalWords = "";
-        interimWords = "";
-
-        talkButton.disabled = false;
-        talkButton.textContent = "🎤 Listening...";
-        statusText.textContent =
-            "Listening! Say what you want to watch.";
-        heardText.textContent = "";
-
-        const thisSession = sessionNumber;
-
-        // If Safari stays open but doesn't finish, use captured words.
-        listenTimer = setTimeout(() => {
-            if (!listening || thisSession !== sessionNumber) return;
-
-            const words = (finalWords || interimWords).trim();
-
-            if (words) {
-                searchYouTube(words);
-            } else {
-                try {
-                    recognition.stop();
-                } catch (error) {}
-
-                resetTalkButton();
-                statusText.textContent =
-                    "Didn't catch that. Tap Talk and try again.";
-            }
-        }, 12000);
-    };
-
-    recognition.onresult = event => {
-        if (searching) return;
-
-        let completedWords = "";
-        let currentWords = "";
-        let hasFinalResult = false;
-
-        for (let i = 0; i < event.results.length; i++) {
-            const result = event.results[i];
-            const transcript = result[0].transcript.trim();
-
-            if (!transcript) continue;
-
-            if (result.isFinal) {
-                completedWords += transcript + " ";
-                hasFinalResult = true;
-            } else {
-                currentWords += transcript + " ";
-            }
-        }
-
-        if (hasFinalResult) {
-            finalWords = completedWords.trim();
-        }
-
-        interimWords = currentWords.trim();
-
-        const words = (finalWords + " " + interimWords).trim();
-
-        if (words) {
-            heardText.textContent = "I heard: " + words;
-            statusText.textContent = "Got it!";
-
-            // Give Safari a moment to finish delivering the final result.
-            clearTimeout(resultTimer);
-
-            resultTimer = setTimeout(() => {
-                if (!listening || searching) return;
-
-                const query = (finalWords || interimWords).trim();
-
-                if (query) {
-                    searchYouTube(query);
-                }
-            }, hasFinalResult ? 500 : 1800);
-        }
-    };
-
-    recognition.onerror = event => {
-        if (searching) return;
-
-        clearTimeout(listenTimer);
-        clearTimeout(resultTimer);
-
-        // If Safari returned words before an error, still use them.
-        const words = (finalWords || interimWords).trim();
-
-        if (words) {
-            searchYouTube(words);
-            return;
-        }
-
-        resetTalkButton();
-
-        const messages = {
-            "not-allowed": "Microphone access was blocked.",
-            "service-not-allowed": "Safari blocked the speech service.",
-            "no-speech": "I didn't hear anything. Tap Talk and try again.",
-            "audio-capture": "I couldn't access the microphone.",
-            "network": "The speech service connection failed. Try again.",
-            "aborted": "Listening cancelled."
-        };
-
-        statusText.textContent = messages[event.error] ||
-            "Voice search failed. Please try again.";
-
-        if (event.error !== "aborted") {
-            say(statusText.textContent);
-        }
-    };
-
-    recognition.onend = () => {
-        if (searching) return;
-
-        clearTimeout(listenTimer);
-
-        const words = (finalWords || interimWords).trim();
-
-        // This is the important fix:
-        // when Safari finishes listening, search whatever it recognized.
-        if (words) {
-            searchYouTube(words);
-            return;
-        }
-
-        resetTalkButton();
-        statusText.textContent =
-            "Didn't catch that. Tap Talk again or type below.";
-    };
-
-    // Talk button
-    talkButton.addEventListener("click", () => {
-        if (listening) {
-            // Pressing Talk again finishes listening.
-            // It does NOT cancel the search.
-            statusText.textContent = "Finishing your search...";
-            talkButton.textContent = "⏳ Processing...";
-
-            clearTimeout(listenTimer);
-
-            try {
-                recognition.stop();
-            } catch (error) {
-                const words = (finalWords || interimWords).trim();
-
-                if (words) {
-                    searchYouTube(words);
-                } else {
-                    resetTalkButton();
-                    statusText.textContent =
-                        "Didn't catch that. Please try again.";
-                }
-            }
-
-            return;
-        }
-
-        clearTimeout(listenTimer);
-        clearTimeout(resultTimer);
-        clearTimeout(searchTimer);
-
-        searching = false;
-        finalWords = "";
-        interimWords = "";
-        sessionNumber++;
-
-        if ("speechSynthesis" in window) {
-            speechSynthesis.cancel();
-        }
-
-        heardText.textContent = "";
-        statusText.textContent = "Starting microphone...";
-        talkButton.disabled = true;
-        talkButton.textContent = "🎤 Starting...";
-
-        try {
-            recognition.start();
-        } catch (error) {
-            resetTalkButton();
-            statusText.textContent =
-                "Couldn't start. Wait a moment and tap Talk again.";
-        }
-    });
-} else {
-    talkButton.addEventListener("click", () => {
-        statusText.textContent =
-            "Voice recognition isn't available in this browser. Type your search below.";
-        searchInput.focus();
-    });
-}
 </script>
