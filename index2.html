@@ -1,121 +1,481 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#eef7ff">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VideoBuddy</title>
+
 <style>
-:root{--bg:#eef7ff;--blue:#2478c7;--dark:#155b9e;--ink:#15334a;--muted:#587187;--border:#d4e7f8}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(#f8fcff,var(--bg));font-family:system-ui,-apple-system,sans-serif;color:var(--ink)}
-main{max-width:950px;margin:auto;padding:20px 14px 35px}.back{color:var(--dark);font-weight:700;text-decoration:none}
-header{text-align:center;padding:15px 0 22px}h1{font-size:clamp(2rem,8vw,3rem);margin:10px 0}header p{color:var(--muted)}
-.panel{background:#fff;border:1px solid var(--border);border-radius:22px;padding:18px;margin:14px 0;box-shadow:0 12px 32px #1c5e9910}
-.searchrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-top:10px}input{min-width:0;width:100%;padding:14px;border:2px solid var(--border);border-radius:14px;font:inherit}
-button{font:inherit;cursor:pointer;border:0;border-radius:14px;padding:12px;background:var(--blue);color:white;font-weight:750;min-height:50px}
-.primary{padding-inline:17px}.mic{font-size:1.3rem}.status{min-height:24px;color:var(--muted);line-height:1.4}
-h2{font-size:1.25rem;margin:0 0 14px}.small{color:var(--muted);font-size:.9rem;line-height:1.5}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.category{min-height:90px;background:#dceeff;color:var(--dark);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
-.emoji{font-size:1.7rem}.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.chip{background:#f4f9ff;color:var(--dark);border:1px solid var(--border);border-radius:999px;min-height:40px}
-.results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.result{display:block;text-decoration:none;color:var(--ink);border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff}
-.thumb{aspect-ratio:16/9;display:grid;place-items:center;background:linear-gradient(135deg,#d8edff,#f4faff);font-size:2.5rem}.copy{padding:12px}.title{font-weight:800;display:block}.desc{display:block;color:var(--muted);font-size:.9rem;margin-top:5px;line-height:1.4}
-.notice{background:#fff9e9;border:1px solid #f2dfaa;border-radius:12px;padding:12px;color:#634b10;line-height:1.45}.footer{text-align:center;color:var(--muted);font-size:.88rem;padding:12px}
-[hidden]{display:none!important}
-@media(max-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.searchrow{grid-template-columns:1fr auto}.primary{grid-column:1/-1;grid-row:2}}
-@media(max-width:390px){.grid,.results{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:14px}.category{font-size:.9rem}}
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #101522;
+    color: white;
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 850px;
+    margin: auto;
+}
+
+h1 {
+    text-align: center;
+    color: #8db5ff;
+    font-size: 38px;
+}
+
+.card {
+    background: #1d2638;
+    padding: 20px;
+    margin: 16px 0;
+    border-radius: 16px;
+}
+
+button, input {
+    font: inherit;
+    border-radius: 12px;
+    padding: 14px;
+    border: 2px solid transparent;
+}
+
+button {
+    background: #8db5ff;
+    color: #101522;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 5px;
+}
+
+button:hover, button:focus-visible {
+    background: #c2d6ff;
+    outline: 3px solid white;
+}
+
+input {
+    width: 100%;
+    margin: 8px 0;
+    background: white;
+    color: #111;
+}
+
+.search-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.big-button {
+    width: 100%;
+    font-size: 20px;
+    min-height: 60px;
+}
+
+.suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.suggestions button {
+    font-size: 17px;
+}
+
+#status {
+    min-height: 28px;
+    color: #d1e0ff;
+}
+
+footer {
+    text-align: center;
+    margin-top: 25px;
+}
+
+a {
+    color: #b9d1ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        scroll-behavior: auto !important;
+    }
+}
 </style>
 </head>
-<body><main>
-<a class="back" href="../index.html">← Back to TypeFlow</a>
-<header><h1>🎬 VideoBuddy</h1><p>Say it, type it, or tap a topic to find videos.</p></header>
-<section class="panel">
-<form id="form"><label for="query"><strong>What do you want to watch?</strong></label>
-<div class="searchrow"><input id="query" placeholder="Try “plane seat review”" autocomplete="off"><button class="mic" id="mic" type="button" aria-label="Voice search">🎤</button><button class="primary" type="submit">Find videos 🔎</button></div></form>
-<p id="status" class="status" aria-live="polite">Try vacation, cake, Bahamas, India, Europe, or plane.</p>
-<div class="chips">
-<button class="chip" data-search="vacation travel vlog">Vacation</button>
-<button class="chip" data-search="cake decorating and cake cutting">Cake</button>
-<button class="chip" data-search="Bahamas travel vlog beaches">Bahamas</button>
-<button class="chip" data-search="India travel vlog food places">India</button>
-<button class="chip" data-search="Europe travel vlog">Europe</button>
-<button class="chip" data-search="airplane seat review airline amenities review">Plane ✈️</button>
-</div></section>
-<section class="panel"><h2>Explore topics</h2><div class="grid">
-<button class="category" data-category="vacation"><span class="emoji">🏖️</span>Vacation</button>
-<button class="category" data-category="cake"><span class="emoji">🎂</span>Cake</button>
-<button class="category" data-category="bahamas"><span class="emoji">🌴</span>Bahamas</button>
-<button class="category" data-category="India"><span class="emoji">🇮🇳</span>India</button>
-<button class="category" data-category="Europe"><span class="emoji">🇪🇺</span>Europe</button>
-<button class="category" data-category="plane"><span class="emoji">✈️</span>Planes</button>
-<button class="category" data-category="airplane seat review legroom"><span class="emoji">💺</span>Seat reviews</button>
-<button class="category" data-category="airline amenities review meals entertainment Wi-Fi"><span class="emoji">🍱</span>Plane amenities</button>
-<button class="category" data-category="hotel room tour review"><span class="emoji">🏨</span>Hotels</button>
-<button class="category" data-category="airport tour planes takeoff landing"><span class="emoji">🛫</span>Airports</button>
-<button class="category" data-category="food ASMR eating videos"><span class="emoji">🍜</span>Food</button>
-<button class="category" data-category="easy cake decorating baking"><span class="emoji">🧁</span>Baking</button>
-<button class="category" data-category="cute animals dogs cats"><span class="emoji">🐶</span>Animals</button>
-<button class="category" data-category="cars supercars review"><span class="emoji">🚗</span>Cars</button>
-<button class="category" data-category="theme park rides tour"><span class="emoji">🎢</span>Theme parks</button>
-<button class="category" data-category="kids music songs"><span class="emoji">🎵</span>Music</button>
-<button class="category" data-category="train journey train review"><span class="emoji">🚆</span>Trains</button>
-<button class="category" data-category="cruise ship tour review"><span class="emoji">🛳️</span>Cruises</button>
-<button class="category" data-category="beach ocean relaxing videos"><span class="emoji">🌊</span>Beaches</button>
-<button class="category" data-category="cartoons for kids"><span class="emoji">🎨</span>Cartoons</button>
-</div></section>
-<section class="panel" id="resultSection" hidden><h2 id="resultHeading">Video ideas</h2><p class="small">Tap a card to open real YouTube search results.</p><div id="results" class="results"></div></section>
-<section class="panel" id="planeSection" hidden><h2>✈️ Plane videos</h2><p>Choose a specific kind of review:</p><div class="chips">
-<button class="chip" data-search="airplane seat review seat pitch legroom">💺 Seat review</button>
-<button class="chip" data-search="airline amenities review meals entertainment Wi-Fi">🍱 Amenities review</button>
-<button class="chip" data-search="airline business class economy class cabin tour">🛋️ Cabin tour</button>
-<button class="chip" data-search="airplane takeoff landing window view">🛫 Takeoff and landing</button>
-<button class="chip" data-search="airline meal food review">🍽️ Airline food</button>
-</div></section>
-<section class="panel"><h2>How it works</h2><p class="small">VideoBuddy matches your words to helpful search ideas, then opens real YouTube results. Voice input depends on your browser. YouTube search pages cannot reliably play inside an embedded player, so this version opens the actual results instead.</p><p class="notice">If the microphone doesn't work, type your search or tap a topic.</p></section>
-<p class="footer">VideoBuddy • A TypeFlow add-on</p>
-</main>
+
+<body>
+<div class="container">
+
+    <h1 data-speak="Welcome to VideoBuddy!">
+        🎬 VideoBuddy
+    </h1>
+
+    <div class="card">
+        <h2 data-speak="Hi! I am VideoBuddy. You can talk to me, search for videos, or move your mouse over words and buttons to hear them.">
+            Hi! I'm VideoBuddy!
+        </h2>
+
+        <p data-speak="You can search for videos by speaking or typing. Move your mouse over a button or piece of text to hear it read aloud.">
+            Find videos using your voice or by typing. Hover over text and buttons to hear them!
+        </p>
+
+        <button class="big-button" id="speakWelcome">
+            🔊 Read Instructions
+        </button>
+
+        <button class="big-button" id="stopSpeaking">
+            🔇 Stop Speaking
+        </button>
+    </div>
+
+    <div class="card">
+        <h2>🎤 Talk to VideoBuddy</h2>
+
+        <p data-speak="Press Start Voice Search, wait for the listening message, and then say what you want to watch.">
+            Press the button and say what you want to watch.
+        </p>
+
+        <button class="big-button" id="voiceButton">
+            🎤 Start Voice Search
+        </button>
+
+        <p id="status" aria-live="polite">
+            Ready! Press Start Voice Search.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>🔎 Search for a Video</h2>
+
+        <form id="searchForm">
+            <div class="search-row">
+                <input
+                    id="searchInput"
+                    type="text"
+                    placeholder="What do you want to watch?"
+                    aria-label="Type what you want to watch"
+                    autocomplete="off"
+                >
+
+                <button class="big-button" type="submit">
+                    🔎 Search Videos
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>⭐ What would you like to watch?</h2>
+
+        <p data-speak="Choose a suggestion. You can hover over each suggestion to hear it, or click it to search.">
+            Choose something to watch!
+        </p>
+
+        <div class="suggestions" id="suggestions">
+            <button data-query="funny animal videos">🐶 Funny Animals</button>
+            <button data-query="cake baking videos">🎂 Baking Cakes</button>
+            <button data-query="India travel videos">🇮🇳 India</button>
+            <button data-query="beach vacation videos">🏖️ Beaches</button>
+            <button data-query="airplane videos">✈️ Airplanes</button>
+            <button data-query="train videos for kids">🚆 Trains</button>
+            <button data-query="theme park rides">🎢 Theme Parks</button>
+            <button data-query="cartoons for kids">📺 Cartoons</button>
+            <button data-query="car videos">🚗 Cars</button>
+            <button data-query="easy cooking videos">🍕 Cooking</button>
+            <button data-query="fun science experiments for kids">🔬 Science</button>
+            <button data-query="ocean animal videos">🐬 Ocean Animals</button>
+            <button data-query="football soccer highlights">⚽ Soccer</button>
+            <button data-query="music videos">🎵 Music</button>
+            <button data-query="hotels and resorts tour">🏨 Hotels</button>
+            <button data-query="airport tour videos">🛫 Airports</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📺 Ready to Watch?</h2>
+
+        <p data-speak="When you search, YouTube will open in a new tab with videos matching your search. Ask a grown-up for help if you need it.">
+            Search results open on YouTube in a new tab.
+        </p>
+
+        <button class="big-button" id="repeatLastSearch">
+            🔁 Repeat Last Search
+        </button>
+    </div>
+
+    <footer>
+        <a href="index.html" data-speak="Back to TypeFlow.">
+            ← Back to TypeFlow
+        </a>
+    </footer>
+
+</div>
+
 <script>
-"use strict";
-const query=document.getElementById("query"),statusEl=document.getElementById("status"),results=document.getElementById("results"),resultSection=document.getElementById("resultSection"),planeSection=document.getElementById("planeSection");
-const groups=[
-{terms:["vacation","holiday","trip","travel","travelling","traveling"],items:[["Vacation vlogs","vacation travel vlog","🏖️"],["Best places to visit","best vacation destinations travel guide","🗺️"],["Hotel and resort tours","hotel resort room tour review","🏨"],["Packing for a trip","travel packing tips suitcase","🧳"]]},
-{terms:["cake","cakes","birthday cake"],items:[["Cake decorating","cake decorating tutorial","🎂"],["Satisfying cake cutting","satisfying cake cutting videos","🍰"],["Cake recipes","easy cake recipe baking","🧁"],["Amazing cake designs","creative amazing cake designs","🎨"]]},
-{terms:["bahamas","bahama"],items:[["Bahamas travel vlogs","Bahamas travel vlog","🌴"],["Bahamas beaches","Bahamas beautiful beaches travel","🏖️"],["Bahamas resorts","Bahamas resort hotel tour","🏨"],["Things to do in the Bahamas","things to do in the Bahamas travel guide","🐠"]]},
-{terms:["india","indian"],items:[["India travel vlogs","India travel vlog","🇮🇳"],["Indian food","Indian street food tour","🍛"],["Places to visit in India","best places to visit in India travel guide","🕌"],["Indian train journeys","Indian train journey travel vlog","🚆"]]},
-{terms:["europe","european"],items:[["Europe travel vlogs","Europe travel vlog","🇪🇺"],["European cities","best cities to visit in Europe travel guide","🏙️"],["European train journeys","Europe scenic train journey","🚆"],["Europe hotel tours","Europe hotel room tour review","🏨"]]},
-{terms:["plane","planes","airplane","airplanes","flight","flights","airline","aviation"],items:[["Airplane seat reviews","airplane seat review legroom seat pitch","💺"],["Airline amenities reviews","airline amenities review meals entertainment Wi-Fi","🍱"],["Airline cabin tours","airline cabin tour economy business class","🛋️"],["Flight reviews","airline flight experience review","🌍"],["Takeoff and landing","airplane takeoff landing window view","🛫"],["Airplane meals","airline airplane food review","🍽️"]]},
-{terms:["seat","seats","legroom"],items:[["Airplane seat reviews","airplane seat review legroom seat pitch","💺"],["Economy class seats","economy class airplane seat review","💺"],["Business class seats","business class airplane seat review","🛋️"]]},
-{terms:["amenities","inflight entertainment","in flight entertainment"],items:[["Airline amenities reviews","airline amenities review meals entertainment Wi-Fi","🍱"],["In-flight entertainment","airline in flight entertainment screen review","📺"],["Airline food reviews","airline food meal review","🍽️"],["Airline Wi-Fi reviews","airline Wi-Fi review onboard","📶"]]},
-{terms:["hotel","hotels","resort"],items:[["Hotel room tours","hotel room tour review","🏨"],["Luxury hotels","luxury hotel tour","✨"],["Family resorts","family resort tour review","🏝️"]]},
-{terms:["airport","airports"],items:[["Airport tours","airport terminal tour","🛫"],["Plane spotting","airport plane spotting takeoff landing","✈️"],["Airport lounges","airport lounge tour review","🛋️"]]},
-{terms:["food","eat","eating","hungry","chewing","asmr"],items:[["Food ASMR","food ASMR eating videos","🍜"],["Street food","street food travel vlog","🥙"],["Cooking videos","easy cooking videos","🍳"]]},
-{terms:["bake","baking","cupcake","cupcakes","dessert","desserts"],items:[["Easy baking","easy baking recipes","🧁"],["Dessert decorating","dessert decorating satisfying","🍨"],["Cupcake videos","cupcake decorating tutorial","🧁"]]},
-{terms:["dog","dogs","puppy","puppies","cat","cats","animal","animals"],items:[["Cute animal videos","cute animals videos","🐶"],["Funny dogs","funny dogs videos","🐕"],["Cute cats","cute cats videos","🐈"]]},
-{terms:["car","cars","supercar","supercars"],items:[["Supercar reviews","supercar review","🏎️"],["Car tours","car interior exterior tour","🚗"],["Luxury cars","luxury car review","✨"]]},
-{terms:["theme park","roller coaster","rollercoaster","rides"],items:[["Theme park tours","theme park tour rides","🎢"],["Roller coaster rides","roller coaster front seat ride","🎢"],["Theme park reviews","theme park review family attractions","🎡"]]},
-{terms:["music","song","songs","sing"],items:[["Music videos","kids music songs","🎵"],["Sing-along songs","sing along songs for kids","🎤"]]},
-{terms:["train","trains","railway"],items:[["Train journeys","scenic train journey","🚆"],["Train reviews","train review seats amenities","🚄"],["Train cab views","train journey cab view","🛤️"]]},
-{terms:["cruise","cruises","cruise ship"],items:[["Cruise ship tours","cruise ship tour review","🛳️"],["Cruise cabin tours","cruise ship cabin room tour","🛏️"],["Cruise food reviews","cruise ship food review","🍽️"]]},
-{terms:["beach","beaches","ocean","sea"],items:[["Beautiful beaches","beautiful beaches travel videos","🌊"],["Beach vacations","beach vacation travel vlog","🏖️"],["Ocean animals","ocean sea animals videos","🐬"]]},
-{terms:["cartoon","cartoons","animation"],items:[["Cartoons","cartoons for kids","🎨"],["Animated stories","animated stories for kids","📚"]]}
-];
-function norm(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\p{L}\p{N}\s]/gu," ").replace(/\s+/g," ").trim()}
-function suggestions(raw){
- const s=norm(raw);let winner=null,top=0;
- for(const g of groups){let score=0;for(const term of g.terms){const t=norm(term);if(s===t)score=Math.max(score,100+t.length);else if(s.includes(t))score=Math.max(score,60+t.length);else if(t.includes(s)&&s.length>=3)score=Math.max(score,30+s.length);else{const n=s.split(" ").filter(w=>g.terms.some(v=>norm(v).split(" ").some(tw=>tw===w||(w.length>=3&&(tw.startsWith(w)||w.startsWith(tw)))))).length;score=Math.max(score,n*8)}}if(score>top){top=score;winner=g}}
- return winner&&top>=8?winner.items:[[raw+" videos",raw+" videos","🔎"],["Best "+raw,"best "+raw,"⭐"],[raw+" reviews and tours",raw+" review tour","🎥"]];
+const statusText = document.getElementById("status");
+const searchInput = document.getElementById("searchInput");
+const voiceButton = document.getElementById("voiceButton");
+
+let lastSearch = "";
+let recognition = null;
+let isListening = false;
+let hoverTimer = null;
+let lastHoveredElement = null;
+
+/* SPEAK TEXT OUT LOUD */
+
+function speak(text) {
+    if (!("speechSynthesis" in window)) {
+        statusText.textContent =
+            "Speech is not supported by this browser.";
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const message = new SpeechSynthesisUtterance(text);
+    message.lang = "en-US";
+    message.rate = 0.9;
+    message.pitch = 1;
+
+    window.speechSynthesis.speak(message);
 }
-function render(raw){
- const text=raw.trim();if(!text){statusEl.textContent="Type something or tap a topic first.";query.focus();return}
- const items=suggestions(text);results.replaceChildren();document.getElementById("resultHeading").textContent="Video ideas for “"+text+"”";
- for(const [title,search,emoji] of items){const a=document.createElement("a");a.className="result";a.href="https://www.youtube.com/results?search_query="+encodeURIComponent(search);a.target="_blank";a.rel="noopener noreferrer";const thumb=document.createElement("div");thumb.className="thumb";thumb.textContent=emoji;const copy=document.createElement("div");copy.className="copy";const t=document.createElement("span");t.className="title";t.textContent=title;const d=document.createElement("span");d.className="desc";d.textContent="Tap to see matching YouTube videos ↗";copy.append(t,d);a.append(thumb,copy);results.append(a)}
- resultSection.hidden=false;const n=norm(text);planeSection.hidden=!(n.includes("plane")||n.includes("airline")||n.includes("flight")||n.includes("seat")||n.includes("amenit"));statusEl.textContent="Here are "+items.length+" search ideas. Tap one to see real YouTube results.";resultSection.scrollIntoView({behavior:"smooth",block:"start"});
+
+/* STOP SPEECH */
+
+document.getElementById("stopSpeaking").addEventListener("click", () => {
+    window.speechSynthesis.cancel();
+});
+
+/* READ INSTRUCTIONS */
+
+document.getElementById("speakWelcome").addEventListener("click", () => {
+    speak(
+        "Welcome to VideoBuddy! " +
+        "You can search by typing or speaking. " +
+        "Move your mouse over text and buttons to hear them. " +
+        "Choose a suggestion or tell me what you want to watch. " +
+        "Your YouTube search will open in a new tab."
+    );
+});
+
+/* READ TEXT WHEN THE MOUSE HOVERS OVER IT */
+
+document.addEventListener("mouseover", (event) => {
+    const element = event.target.closest(
+        "h1, h2, h3, p, button, a, label, input"
+    );
+
+    if (!element || element === lastHoveredElement) {
+        return;
+    }
+
+    lastHoveredElement = element;
+
+    clearTimeout(hoverTimer);
+
+    hoverTimer = setTimeout(() => {
+        if (element.tagName === "INPUT") {
+            speak(element.getAttribute("placeholder") ||
+                  element.getAttribute("aria-label") ||
+                  "Search box");
+            return;
+        }
+
+        const text = element.getAttribute("data-speak") ||
+                     element.getAttribute("aria-label") ||
+                     element.innerText;
+
+        if (text && text.trim()) {
+            speak(text.trim());
+        }
+    }, 350);
+});
+
+document.addEventListener("mouseout", (event) => {
+    const element = event.target.closest(
+        "h1, h2, h3, p, button, a, label, input"
+    );
+
+    if (element && !element.contains(event.relatedTarget)) {
+        lastHoveredElement = null;
+        clearTimeout(hoverTimer);
+    }
+});
+
+/* ALSO READ ITEMS WHEN THEY RECEIVE KEYBOARD FOCUS */
+
+document.addEventListener("focusin", (event) => {
+    const element = event.target.closest(
+        "h1, h2, h3, p, button, a, label, input"
+    );
+
+    if (!element) return;
+
+    const text = element.getAttribute("data-speak") ||
+                 element.getAttribute("aria-label") ||
+                 element.getAttribute("placeholder") ||
+                 element.innerText;
+
+    if (text && text.trim()) {
+        speak(text.trim());
+    }
+});
+
+/* SEARCH FOR VIDEOS */
+
+function searchVideos(query) {
+    query = query.trim();
+
+    if (!query) {
+        speak("Please tell me what you want to watch.");
+        statusText.textContent = "Please enter a search.";
+        return;
+    }
+
+    lastSearch = query;
+
+    statusText.textContent = "Searching YouTube for " + query;
+
+    speak("Searching YouTube for " + query);
+
+    const url =
+        "https://www.youtube.com/results?search_query=" +
+        encodeURIComponent(query);
+
+    window.open(url, "_blank");
 }
-document.getElementById("form").addEventListener("submit",e=>{e.preventDefault();render(query.value)});
-document.querySelectorAll("[data-search]").forEach(b=>b.addEventListener("click",()=>{query.value=b.dataset.search;render(query.value)}));
-document.querySelectorAll("[data-category]").forEach(b=>b.addEventListener("click",()=>{query.value=b.dataset.category;render(query.value)}));
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition,mic=document.getElementById("mic");
-if(SR){const rec=new SR();rec.lang="en-US";rec.continuous=false;rec.interimResults=false;rec.maxAlternatives=3;mic.addEventListener("click",()=>{statusEl.textContent="Listening… say what you want to watch.";try{rec.start()}catch(e){statusEl.textContent="Wait a moment, then try the microphone again."}});rec.onresult=e=>{query.value=e.results[0][0].transcript;render(query.value)};rec.onerror=()=>statusEl.textContent="Voice search didn't work. Try typing or tapping a topic."}
-else mic.addEventListener("click",()=>statusEl.textContent="This browser doesn't support voice search here. Try typing instead.");
+
+/* TYPED SEARCH */
+
+document.getElementById("searchForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    searchVideos(searchInput.value);
+});
+
+/* CLICK A SUGGESTION */
+
+document.getElementById("suggestions").addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-query]");
+
+    if (!button) return;
+
+    searchVideos(button.dataset.query);
+});
+
+/* REPEAT LAST SEARCH */
+
+document.getElementById("repeatLastSearch").addEventListener("click", () => {
+    if (lastSearch) {
+        searchVideos(lastSearch);
+    } else {
+        speak("You have not searched for anything yet.");
+    }
+});
+
+/* VOICE SEARCH SUPPORT */
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+        isListening = true;
+        voiceButton.textContent = "🛑 Listening...";
+        statusText.textContent = "I'm listening. Tell me what you want to watch.";
+        speak("I'm listening. What would you like to watch?");
+    };
+
+    recognition.onresult = (event) => {
+        const transcript =
+            event.results[0][0].transcript.trim();
+
+        searchInput.value = transcript;
+
+        statusText.textContent = "I heard: " + transcript;
+
+        speak("I heard " + transcript);
+
+        setTimeout(() => {
+            searchVideos(transcript);
+        }, 1200);
+    };
+
+    recognition.onerror = (event) => {
+        isListening = false;
+        voiceButton.textContent = "🎤 Start Voice Search";
+
+        let message = "Sorry, I couldn't hear you. Please try again.";
+
+        if (event.error === "not-allowed" ||
+            event.error === "service-not-allowed") {
+            message =
+                "Microphone access was denied. Please allow microphone access in Safari settings.";
+        } else if (event.error === "no-speech") {
+            message =
+                "I didn't hear anything. Please press the button and try again.";
+        } else if (event.error === "network") {
+            message =
+                "Voice recognition had a network problem. Please try again.";
+        }
+
+        statusText.textContent = message;
+        speak(message);
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        voiceButton.textContent = "🎤 Start Voice Search";
+    };
+
+    voiceButton.addEventListener("click", () => {
+        if (isListening) {
+            recognition.stop();
+            return;
+        }
+
+        try {
+            recognition.start();
+        } catch (error) {
+            statusText.textContent =
+                "Please wait a moment and try again.";
+            speak("Please wait a moment and try again.");
+        }
+    });
+
+} else {
+    voiceButton.addEventListener("click", () => {
+        const message =
+            "Voice recognition is not supported in this browser. Please try a browser that supports speech recognition.";
+
+        statusText.textContent = message;
+        speak(message);
+    });
+}
+
+/* WELCOME MESSAGE */
+
+window.addEventListener("load", () => {
+    statusText.textContent =
+        "Ready! Hover over text to hear it, or press Start Voice Search.";
+
+    // No automatic speech on page load.
+    // The user can press Read Instructions when ready.
+});
 </script>
+
 </body>
 </html>
