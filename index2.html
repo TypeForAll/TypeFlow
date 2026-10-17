@@ -17,10 +17,7 @@ body {
     text-align: center;
 }
 
-main {
-    max-width: 650px;
-    margin: auto;
-}
+main { max-width: 650px; margin: auto; }
 
 h1 { color: #8db5ff; font-size: 36px; }
 h2 { font-size: 22px; }
@@ -52,10 +49,7 @@ button:hover, button:focus-visible {
     outline: 3px solid white;
 }
 
-button:disabled {
-    opacity: 0.65;
-    cursor: wait;
-}
+button:disabled { opacity: .65; cursor: wait; }
 
 .main-button {
     display: block;
@@ -107,35 +101,18 @@ a { color: #8db5ff; }
     <p data-say="Find videos you love">Find videos you love!</p>
 
     <section class="card">
-        <button class="main-button" id="talk" data-say="Talk">
-            🎤 Talk
-        </button>
-
-        <button class="main-button" id="toggle" data-say="Speaking on or off">
-            🔊 Speaking: ON
-        </button>
-
-        <button class="main-button" id="stop" data-say="Stop">
-            ⏹ Stop
-        </button>
-
+        <button class="main-button" id="talk" data-say="Talk">🎤 Talk</button>
+        <button class="main-button" id="toggle" data-say="Speaking on or off">🔊 Speaking: ON</button>
+        <button class="main-button" id="stop" data-say="Stop">⏹ Stop</button>
         <p id="status" aria-live="polite">Ready!</p>
         <p id="heard" aria-live="polite"></p>
     </section>
 
     <section class="card">
         <h2 data-say="Search videos">🔎 Search Videos</h2>
-
         <form id="searchForm">
-            <input
-                id="searchInput"
-                placeholder="What do you want to watch?"
-                aria-label="What do you want to watch?"
-                autocomplete="off"
-            >
-            <button class="main-button" type="submit" data-say="Search">
-                Search
-            </button>
+            <input id="searchInput" placeholder="What do you want to watch?" aria-label="What do you want to watch?" autocomplete="off">
+            <button class="main-button" type="submit" data-say="Search">Search</button>
         </form>
     </section>
 
@@ -239,10 +216,9 @@ function say(text) {
     speechSynthesis.speak(message);
 }
 
-// Read short labels when hovering.
+// Speak short labels on hover.
 document.addEventListener("mouseover", event => {
     const item = event.target.closest("[data-say]");
-
     if (!item || !speaking || item === hoveredItem || listening) return;
 
     hoveredItem = item;
@@ -262,10 +238,9 @@ document.addEventListener("mouseout", event => {
     }
 });
 
-// Turn spoken feedback on or off.
+// Speaking toggle.
 toggleButton.addEventListener("click", () => {
     speaking = !speaking;
-
     if ("speechSynthesis" in window) speechSynthesis.cancel();
 
     toggleButton.textContent = speaking
@@ -288,10 +263,10 @@ function resetTalkButton() {
     clearTimeout(listenTimer);
 }
 
-function stopEverything() {
+// Stop everything.
+stopButton.addEventListener("click", () => {
     clearTimers();
-
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    speechSynthesis.cancel();
 
     if (recognition && listening) {
         try { recognition.abort(); } catch (error) {}
@@ -303,14 +278,11 @@ function stopEverything() {
     interimWords = "";
     statusText.textContent = "Stopped.";
     heardText.textContent = "";
-}
+});
 
-stopButton.addEventListener("click", stopEverything);
-
-// Open YouTube search for the words heard or typed.
+// Search YouTube.
 function searchYouTube(query) {
     query = (query || "").trim();
-
     if (!query || searching) return;
 
     searching = true;
@@ -321,20 +293,18 @@ function searchYouTube(query) {
     }
 
     resetTalkButton();
-
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    speechSynthesis.cancel();
 
     statusText.textContent = "Searching!";
     heardText.textContent = "You said: " + query;
 
-    const goToSearch = () => {
+    function goToSearch() {
         if (!searching) return;
-
         searching = false;
         window.location.href =
             "https://www.youtube.com/results?search_query=" +
             encodeURIComponent(query);
-    };
+    }
 
     if (speaking && "speechSynthesis" in window) {
         const message = new SpeechSynthesisUtterance("Searching!");
@@ -343,28 +313,26 @@ function searchYouTube(query) {
         message.onend = goToSearch;
         message.onerror = goToSearch;
         speechSynthesis.speak(message);
-
-        // Safety timeout if spoken feedback doesn't finish.
         searchTimer = setTimeout(goToSearch, 900);
     } else {
         goToSearch();
     }
 }
 
-// Search box.
+// Typed search.
 document.getElementById("searchForm").addEventListener("submit", event => {
     event.preventDefault();
     searchYouTube(searchInput.value);
 });
 
-// Category buttons.
+// Category searches.
 document.querySelectorAll("[data-query]").forEach(button => {
     button.addEventListener("click", () => {
         searchYouTube(button.dataset.query);
     });
 });
 
-// Speech recognition.
+// Voice recognition.
 const SpeechRecognitionAPI =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -386,7 +354,7 @@ if (SpeechRecognitionAPI) {
         statusText.textContent = "Listening! Say what you want to watch.";
         heardText.textContent = "";
 
-        // Never speak over the microphone.
+        // Do not speak while listening; it can interfere with recognition.
         listenTimer = setTimeout(() => {
             const words = (finalWords || interimWords).trim();
 
@@ -394,7 +362,6 @@ if (SpeechRecognitionAPI) {
                 searchYouTube(words);
             } else if (listening) {
                 try { recognition.stop(); } catch (error) {}
-
                 resetTalkButton();
                 statusText.textContent =
                     "Didn't catch that. Tap Talk again or type below.";
@@ -403,51 +370,43 @@ if (SpeechRecognitionAPI) {
     };
 
     recognition.onresult = event => {
-        let newFinal = "";
-        let newInterim = "";
+        let allWords = "";
+        let hasFinal = false;
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        // Read the full current result, not just the latest fragment.
+        for (let i = 0; i < event.results.length; i++) {
             const result = event.results[i];
-            const words = result[0].transcript.trim();
+            const transcript = result[0].transcript.trim();
 
-            if (result.isFinal && words) {
-                newFinal += " " + words;
-            } else if (words) {
-                newInterim += " " + words;
-            }
+            if (transcript) allWords += transcript + " ";
+            if (result.isFinal) hasFinal = true;
         }
 
-        if (newFinal.trim()) {
-            finalWords = (finalWords + " " + newFinal).trim();
+        allWords = allWords.trim();
+        if (!allWords) return;
+
+        if (hasFinal) {
+            finalWords = allWords;
+            interimWords = "";
+        } else {
+            interimWords = allWords;
         }
 
-        if (newInterim.trim()) {
-            interimWords = newInterim.trim();
+        heardText.textContent = "I heard: " + allWords;
+        statusText.textContent = "Got it!";
+
+        // Search immediately when Safari marks the words as final.
+        if (hasFinal) {
+            searchYouTube(finalWords);
+            return;
         }
 
-        const words = (finalWords || interimWords).trim();
-
-        if (words) {
-            heardText.textContent = "I heard: " + words;
-            statusText.textContent = "Got it!";
-
-            // Search immediately when the browser confirms the words.
-            if (newFinal.trim()) {
-                searchYouTube(finalWords);
-                return;
-            }
-
-            // If only interim words arrive, search after a short pause.
-            clearTimeout(resultTimer);
-
-            resultTimer = setTimeout(() => {
-                const latest = (finalWords || interimWords).trim();
-
-                if (listening && latest) {
-                    searchYouTube(latest);
-                }
-            }, 1200);
-        }
+        // If Safari only sends interim results, wait briefly for more speech.
+        clearTimeout(resultTimer);
+        resultTimer = setTimeout(() => {
+            const words = (finalWords || interimWords).trim();
+            if (listening && words) searchYouTube(words);
+        }, 1500);
     };
 
     recognition.onerror = event => {
@@ -468,7 +427,6 @@ if (SpeechRecognitionAPI) {
             "Voice search failed. Tap Talk again or type below.";
 
         statusText.textContent = message;
-
         if (event.error !== "aborted") say(message);
     };
 
@@ -477,6 +435,7 @@ if (SpeechRecognitionAPI) {
 
         const words = (finalWords || interimWords).trim();
 
+        // If Safari ended listening after hearing words, search those words.
         if (listening && words) {
             searchYouTube(words);
             return;
@@ -500,7 +459,6 @@ if (SpeechRecognitionAPI) {
             } else {
                 try { recognition.stop(); } catch (error) {}
             }
-
             return;
         }
 
@@ -514,12 +472,12 @@ if (SpeechRecognitionAPI) {
         talkButton.disabled = true;
         talkButton.textContent = "🎤 Starting…";
 
-        if ("speechSynthesis" in window) speechSynthesis.cancel();
+        speechSynthesis.cancel();
 
         try {
             recognition.start();
 
-            // Recover if Safari doesn't start listening.
+            // Don't leave the button stuck if Safari fails to start.
             setTimeout(() => {
                 if (talkButton.disabled && !listening) {
                     talkButton.disabled = false;
