@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,7 +11,7 @@
 
 body {
     margin: 0;
-    padding: 20px;
+    padding: 24px;
     font-family: Arial, sans-serif;
     background: #101522;
     color: white;
@@ -18,22 +19,30 @@ body {
 }
 
 main {
-    max-width: 500px;
+    max-width: 650px;
     margin: auto;
 }
 
-h1 { color: #8db5ff; }
+h1 { color: #8db5ff; font-size: 36px; }
+h2 { font-size: 22px; }
+
+.card {
+    background: #1d2638;
+    padding: 20px;
+    border-radius: 16px;
+    margin: 18px 0;
+}
+
+button, input {
+    font: inherit;
+    border-radius: 12px;
+    padding: 14px;
+}
 
 button {
-    display: block;
-    width: 100%;
-    padding: 16px;
-    margin: 12px 0;
     border: none;
-    border-radius: 12px;
     background: #8db5ff;
     color: #101522;
-    font-size: 19px;
     font-weight: bold;
     cursor: pointer;
 }
@@ -43,61 +52,147 @@ button:hover, button:focus-visible {
     outline: 3px solid white;
 }
 
+.main-button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    font-size: 19px;
+    min-height: 54px;
+}
+
+input {
+    width: 100%;
+    border: none;
+    background: white;
+    color: #111;
+    margin: 8px 0;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.grid button {
+    min-height: 60px;
+}
+
 #status {
-    min-height: 45px;
-    font-size: 17px;
+    min-height: 28px;
+    color: #d1e0ff;
 }
 
 a { color: #8db5ff; }
+
+@media (max-width: 400px) {
+    body { padding: 12px; }
+    .grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 
 <body>
 <main>
-    <h1>🎬 VideoBuddy</h1>
-    <p>Hover over buttons to hear them!</p>
+    <h1 data-say="VideoBuddy">🎬 VideoBuddy</h1>
+    <p data-say="Find videos you love">Find videos you love!</p>
 
-    <button id="talk" data-say="Talk">🎤 Talk</button>
+    <section class="card">
+        <button class="main-button" id="talk" data-say="Talk">
+            🎤 Talk
+        </button>
 
-    <button id="toggle" data-say="Speaking on or off">
-        🔊 Speaking: ON
-    </button>
+        <button class="main-button" id="toggle" data-say="Speaking on or off">
+            🔊 Speaking: ON
+        </button>
 
-    <button id="stop" data-say="Stop speaking and listening">
-        ⏹ Stop
-    </button>
+        <button class="main-button" id="stop" data-say="Stop">
+            ⏹ Stop
+        </button>
 
-    <p id="status" aria-live="polite">Ready!</p>
+        <p id="status" aria-live="polite">Ready!</p>
+    </section>
 
-    <h2>Choose a video</h2>
+    <section class="card">
+        <h2 data-say="Search videos">🔎 Search Videos</h2>
 
-    <button data-query="funny animal videos" data-say="Animals">
-        🐶 Animals
-    </button>
+        <form id="searchForm">
+            <input
+                id="searchInput"
+                placeholder="What do you want to watch?"
+                aria-label="What do you want to watch?"
+            >
+            <button class="main-button" type="submit" data-say="Search">
+                Search
+            </button>
+        </form>
+    </section>
 
-    <button data-query="cake baking videos" data-say="Cakes">
-        🎂 Cakes
-    </button>
+    <section class="card">
+        <h2 data-say="Food and eating">🍜 Food & Eating ASMR</h2>
+        <div class="grid">
+            <button data-query="food eating ASMR" data-say="Eating ASMR">🍜 Eating ASMR</button>
+            <button data-query="crunchy food ASMR" data-say="Crunchy food">🥨 Crunchy Food</button>
+            <button data-query="street food videos" data-say="Street food">🌮 Street Food</button>
+            <button data-query="Indian food cooking videos" data-say="Indian food">🍛 Indian Food</button>
+            <button data-query="dessert eating ASMR" data-say="Dessert ASMR">🍰 Dessert ASMR</button>
+            <button data-query="chocolate ASMR" data-say="Chocolate">🍫 Chocolate</button>
+            <button data-query="no talking cooking videos" data-say="Cooking">🍳 Cooking</button>
+            <button data-query="bakery tour videos" data-say="Bakeries">🥐 Bakeries</button>
+            <button data-query="ice cream making videos" data-say="Ice cream">🍦 Ice Cream</button>
+            <button data-query="satisfying food preparation" data-say="Satisfying food">🥞 Satisfying Food</button>
+        </div>
+    </section>
 
-    <button data-query="airplane videos" data-say="Airplanes">
-        ✈️ Airplanes
-    </button>
+    <section class="card">
+        <h2 data-say="Travel and places">✈️ Travel & Places</h2>
+        <div class="grid">
+            <button data-query="India travel videos" data-say="India">🇮🇳 India</button>
+            <button data-query="Europe travel videos" data-say="Europe">🇪🇺 Europe</button>
+            <button data-query="Bahamas vacation videos" data-say="Bahamas">🏝️ Bahamas</button>
+            <button data-query="beach vacation videos" data-say="Beaches">🏖️ Beaches</button>
+            <button data-query="hotel room tours" data-say="Hotels">🏨 Hotels</button>
+            <button data-query="luxury hotel tours" data-say="Luxury hotels">🛎️ Luxury Hotels</button>
+            <button data-query="airport walking tour" data-say="Airports">🛫 Airports</button>
+            <button data-query="airplane cabin tour" data-say="Airplane cabins">💺 Airplane Cabins</button>
+            <button data-query="airline seat reviews" data-say="Airline seats">🪑 Airline Seats</button>
+            <button data-query="airplane takeoff landing videos" data-say="Plane takeoffs">🛩️ Plane Takeoffs</button>
+            <button data-query="cruise ship tours" data-say="Cruise ships">🛳️ Cruise Ships</button>
+            <button data-query="train journeys scenic views" data-say="Train journeys">🚆 Train Journeys</button>
+            <button data-query="theme park tours" data-say="Theme parks">🎢 Theme Parks</button>
+            <button data-query="aquarium walking tour" data-say="Aquariums">🐠 Aquariums</button>
+        </div>
+    </section>
 
-    <button data-query="cartoons for kids" data-say="Cartoons">
-        📺 Cartoons
-    </button>
+    <section class="card">
+        <h2 data-say="Animals and nature">🐾 Animals & Nature</h2>
+        <div class="grid">
+            <button data-query="funny dog videos" data-say="Dogs">🐶 Dogs</button>
+            <button data-query="funny cat videos" data-say="Cats">🐱 Cats</button>
+            <button data-query="baby animal videos" data-say="Baby animals">🐣 Baby Animals</button>
+            <button data-query="ocean animals videos" data-say="Ocean animals">🐬 Ocean Animals</button>
+            <button data-query="wildlife documentary" data-say="Wildlife">🦁 Wildlife</button>
+            <button data-query="cute bird videos" data-say="Birds">🦜 Birds</button>
+            <button data-query="aquarium fish videos" data-say="Fish">🐟 Fish</button>
+            <button data-query="satisfying nature videos" data-say="Nature">🌳 Nature</button>
+        </div>
+    </section>
 
-    <button data-query="soccer highlights" data-say="Soccer">
-        ⚽ Soccer
-    </button>
-
-    <button data-query="train videos" data-say="Trains">
-        🚆 Trains
-    </button>
-
-    <button data-query="theme park rides" data-say="Theme parks">
-        🎢 Theme Parks
-    </button>
+    <section class="card">
+        <h2 data-say="More fun videos">🎮 More Fun</h2>
+        <div class="grid">
+            <button data-query="cartoons for kids" data-say="Cartoons">📺 Cartoons</button>
+            <button data-query="football soccer highlights" data-say="Soccer">⚽ Soccer</button>
+            <button data-query="funny videos" data-say="Funny videos">😂 Funny Videos</button>
+            <button data-query="satisfying videos" data-say="Satisfying videos">✨ Satisfying Videos</button>
+            <button data-query="science experiments for kids" data-say="Science">🔬 Science</button>
+            <button data-query="LEGO building videos" data-say="LEGO">🧱 LEGO</button>
+            <button data-query="car reviews and tours" data-say="Cars">🚗 Cars</button>
+            <button data-query="music videos" data-say="Music">🎵 Music</button>
+            <button data-query="waterpark slides videos" data-say="Water parks">💦 Water Parks</button>
+            <button data-query="roller coaster POV videos" data-say="Roller coasters">🎢 Roller Coasters</button>
+        </div>
+    </section>
 
     <p><a href="index.html" data-say="Back to TypeFlow">← Back to TypeFlow</a></p>
 </main>
@@ -125,7 +220,7 @@ function say(text) {
     speechSynthesis.speak(message);
 }
 
-// Hover to hear SHORT labels.
+// Hover reads only the short label.
 document.addEventListener("mouseover", event => {
     const item = event.target.closest("[data-say]");
 
@@ -136,7 +231,7 @@ document.addEventListener("mouseover", event => {
 
     hoverTimer = setTimeout(() => {
         if (speaking) say(item.dataset.say);
-    }, 350);
+    }, 400);
 });
 
 document.addEventListener("mouseout", event => {
@@ -148,7 +243,7 @@ document.addEventListener("mouseout", event => {
     }
 });
 
-// Turn all speaking on or off.
+// Speaking on/off.
 toggleButton.addEventListener("click", () => {
     speaking = !speaking;
     speechSynthesis.cancel();
@@ -164,24 +259,25 @@ toggleButton.addEventListener("click", () => {
 document.getElementById("stop").addEventListener("click", () => {
     speechSynthesis.cancel();
 
-    if (recognition && listening) {
-        recognition.abort();
-    }
+    if (recognition && listening) recognition.abort();
 
     listening = false;
     talkButton.textContent = "🎤 Talk";
     statusText.textContent = "Stopped.";
 });
 
-// Video buttons open YouTube.
+// YouTube search.
 function searchYouTube(query) {
+    query = query.trim();
+    if (!query) return;
+
     listening = false;
     speechSynthesis.cancel();
+
     statusText.textContent = "Searching!";
 
     if (speaking) say("Searching!");
 
-    // Navigate in the same tab to avoid popup blockers.
     setTimeout(() => {
         window.location.href =
             "https://www.youtube.com/results?search_query=" +
@@ -189,16 +285,22 @@ function searchYouTube(query) {
     }, speaking ? 500 : 0);
 }
 
+// Search box.
+document.getElementById("searchForm").addEventListener("submit", event => {
+    event.preventDefault();
+    searchYouTube(document.getElementById("searchInput").value);
+});
+
+// Category buttons.
 document.querySelectorAll("[data-query]").forEach(button => {
     button.addEventListener("click", () => {
         searchYouTube(button.dataset.query);
     });
 });
 
-// Voice search.
+// Voice recognition.
 const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
@@ -225,15 +327,9 @@ if (SpeechRecognition) {
         listening = false;
         talkButton.textContent = "🎤 Talk";
 
-        let message = "Try again!";
-
-        if (event.error === "not-allowed") {
-            message = "Allow microphone access!";
-        } else if (event.error === "no-speech") {
-            message = "I didn't hear you. Try again!";
-        } else if (event.error === "network") {
-            message = "Voice search unavailable!";
-        }
+        const message = event.error === "not-allowed"
+            ? "Allow microphone access!"
+            : "Try again!";
 
         statusText.textContent = message;
         say(message);
@@ -258,7 +354,6 @@ if (SpeechRecognition) {
             say("Try again!");
         }
     });
-
 } else {
     talkButton.addEventListener("click", () => {
         statusText.textContent = "Voice search isn't supported here.";
