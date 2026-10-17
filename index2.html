@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,11 +44,17 @@ button {
     color: #101522;
     font-weight: bold;
     cursor: pointer;
+    touch-action: manipulation;
 }
 
 button:hover, button:focus-visible {
     background: #c4d8ff;
     outline: 3px solid white;
+}
+
+button:disabled {
+    opacity: 0.65;
+    cursor: wait;
 }
 
 .main-button {
@@ -66,6 +71,7 @@ input {
     background: white;
     color: #111;
     margin: 8px 0;
+    min-height: 52px;
 }
 
 .grid {
@@ -74,13 +80,16 @@ input {
     gap: 10px;
 }
 
-.grid button {
-    min-height: 60px;
-}
+.grid button { min-height: 60px; }
 
 #status {
     min-height: 28px;
     color: #d1e0ff;
+}
+
+#heard {
+    min-height: 24px;
+    overflow-wrap: anywhere;
 }
 
 a { color: #8db5ff; }
@@ -111,6 +120,7 @@ a { color: #8db5ff; }
         </button>
 
         <p id="status" aria-live="polite">Ready!</p>
+        <p id="heard" aria-live="polite"></p>
     </section>
 
     <section class="card">
@@ -121,6 +131,7 @@ a { color: #8db5ff; }
                 id="searchInput"
                 placeholder="What do you want to watch?"
                 aria-label="What do you want to watch?"
+                autocomplete="off"
             >
             <button class="main-button" type="submit" data-say="Search">
                 Search
@@ -129,7 +140,7 @@ a { color: #8db5ff; }
     </section>
 
     <section class="card">
-        <h2 data-say="Food and eating">🍜 Food & Eating ASMR</h2>
+        <h2 data-say="Food and eating">🍜 Food &amp; Eating ASMR</h2>
         <div class="grid">
             <button data-query="food eating ASMR" data-say="Eating ASMR">🍜 Eating ASMR</button>
             <button data-query="crunchy food ASMR" data-say="Crunchy food">🥨 Crunchy Food</button>
@@ -145,7 +156,7 @@ a { color: #8db5ff; }
     </section>
 
     <section class="card">
-        <h2 data-say="Travel and places">✈️ Travel & Places</h2>
+        <h2 data-say="Travel and places">✈️ Travel &amp; Places</h2>
         <div class="grid">
             <button data-query="India travel videos" data-say="India">🇮🇳 India</button>
             <button data-query="Europe travel videos" data-say="Europe">🇪🇺 Europe</button>
@@ -165,7 +176,7 @@ a { color: #8db5ff; }
     </section>
 
     <section class="card">
-        <h2 data-say="Animals and nature">🐾 Animals & Nature</h2>
+        <h2 data-say="Animals and nature">🐾 Animals &amp; Nature</h2>
         <div class="grid">
             <button data-query="funny dog videos" data-say="Dogs">🐶 Dogs</button>
             <button data-query="funny cat videos" data-say="Cats">🐱 Cats</button>
@@ -199,14 +210,23 @@ a { color: #8db5ff; }
 
 <script>
 const statusText = document.getElementById("status");
+const heardText = document.getElementById("heard");
 const talkButton = document.getElementById("talk");
 const toggleButton = document.getElementById("toggle");
+const stopButton = document.getElementById("stop");
+const searchInput = document.getElementById("searchInput");
 
 let speaking = true;
 let recognition = null;
 let listening = false;
+let searching = false;
+let finalWords = "";
+let interimWords = "";
+let listenTimer = null;
+let resultTimer = null;
 let hoverTimer = null;
 let hoveredItem = null;
+let searchTimer = null;
 
 function say(text) {
     if (!speaking || !("speechSynthesis" in window)) return;
@@ -215,23 +235,22 @@ function say(text) {
 
     const message = new SpeechSynthesisUtterance(text);
     message.lang = "en-US";
-    message.rate = 1;
-
+    message.rate = 1.1;
     speechSynthesis.speak(message);
 }
 
-// Hover reads only the short label.
+// Read short labels when hovering.
 document.addEventListener("mouseover", event => {
     const item = event.target.closest("[data-say]");
 
-    if (!item || !speaking || item === hoveredItem) return;
+    if (!item || !speaking || item === hoveredItem || listening) return;
 
     hoveredItem = item;
     clearTimeout(hoverTimer);
 
     hoverTimer = setTimeout(() => {
-        if (speaking) say(item.dataset.say);
-    }, 400);
+        if (speaking && !listening) say(item.dataset.say);
+    }, 500);
 });
 
 document.addEventListener("mouseout", event => {
@@ -243,10 +262,11 @@ document.addEventListener("mouseout", event => {
     }
 });
 
-// Speaking on/off.
+// Turn spoken feedback on or off.
 toggleButton.addEventListener("click", () => {
     speaking = !speaking;
-    speechSynthesis.cancel();
+
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
 
     toggleButton.textContent = speaking
         ? "🔊 Speaking: ON"
@@ -255,40 +275,86 @@ toggleButton.addEventListener("click", () => {
     if (speaking) say("On");
 });
 
-// Stop speaking and listening.
-document.getElementById("stop").addEventListener("click", () => {
-    speechSynthesis.cancel();
+function clearTimers() {
+    clearTimeout(listenTimer);
+    clearTimeout(resultTimer);
+    clearTimeout(searchTimer);
+}
 
-    if (recognition && listening) recognition.abort();
-
+function resetTalkButton() {
     listening = false;
+    talkButton.disabled = false;
     talkButton.textContent = "🎤 Talk";
+    clearTimeout(listenTimer);
+}
+
+function stopEverything() {
+    clearTimers();
+
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+
+    if (recognition && listening) {
+        try { recognition.abort(); } catch (error) {}
+    }
+
+    resetTalkButton();
+    searching = false;
+    finalWords = "";
+    interimWords = "";
     statusText.textContent = "Stopped.";
-});
+    heardText.textContent = "";
+}
 
-// YouTube search.
+stopButton.addEventListener("click", stopEverything);
+
+// Open YouTube search for the words heard or typed.
 function searchYouTube(query) {
-    query = query.trim();
-    if (!query) return;
+    query = (query || "").trim();
 
-    listening = false;
-    speechSynthesis.cancel();
+    if (!query || searching) return;
+
+    searching = true;
+    clearTimers();
+
+    if (recognition && listening) {
+        try { recognition.abort(); } catch (error) {}
+    }
+
+    resetTalkButton();
+
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
 
     statusText.textContent = "Searching!";
+    heardText.textContent = "You said: " + query;
 
-    if (speaking) say("Searching!");
+    const goToSearch = () => {
+        if (!searching) return;
 
-    setTimeout(() => {
+        searching = false;
         window.location.href =
             "https://www.youtube.com/results?search_query=" +
             encodeURIComponent(query);
-    }, speaking ? 500 : 0);
+    };
+
+    if (speaking && "speechSynthesis" in window) {
+        const message = new SpeechSynthesisUtterance("Searching!");
+        message.lang = "en-US";
+        message.rate = 1.2;
+        message.onend = goToSearch;
+        message.onerror = goToSearch;
+        speechSynthesis.speak(message);
+
+        // Safety timeout if spoken feedback doesn't finish.
+        searchTimer = setTimeout(goToSearch, 900);
+    } else {
+        goToSearch();
+    }
 }
 
 // Search box.
 document.getElementById("searchForm").addEventListener("submit", event => {
     event.preventDefault();
-    searchYouTube(document.getElementById("searchInput").value);
+    searchYouTube(searchInput.value);
 });
 
 // Category buttons.
@@ -298,66 +364,181 @@ document.querySelectorAll("[data-query]").forEach(button => {
     });
 });
 
-// Voice recognition.
-const SpeechRecognition =
+// Speech recognition.
+const SpeechRecognitionAPI =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
-if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
+if (SpeechRecognitionAPI) {
+    recognition = new SpeechRecognitionAPI();
     recognition.lang = "en-US";
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 5;
 
     recognition.onstart = () => {
         listening = true;
-        talkButton.textContent = "🎤 Listening...";
-        statusText.textContent = "Listening...";
-        say("Go ahead!");
+        searching = false;
+        finalWords = "";
+        interimWords = "";
+
+        talkButton.disabled = false;
+        talkButton.textContent = "🎤 Listening…";
+        statusText.textContent = "Listening! Say what you want to watch.";
+        heardText.textContent = "";
+
+        // Never speak over the microphone.
+        listenTimer = setTimeout(() => {
+            const words = (finalWords || interimWords).trim();
+
+            if (listening && words) {
+                searchYouTube(words);
+            } else if (listening) {
+                try { recognition.stop(); } catch (error) {}
+
+                resetTalkButton();
+                statusText.textContent =
+                    "Didn't catch that. Tap Talk again or type below.";
+            }
+        }, 10000);
     };
 
     recognition.onresult = event => {
-        const words = event.results[0][0].transcript.trim();
+        let newFinal = "";
+        let newInterim = "";
 
-        listening = false;
-        talkButton.textContent = "🎤 Talk";
-        searchYouTube(words);
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            const words = result[0].transcript.trim();
+
+            if (result.isFinal && words) {
+                newFinal += " " + words;
+            } else if (words) {
+                newInterim += " " + words;
+            }
+        }
+
+        if (newFinal.trim()) {
+            finalWords = (finalWords + " " + newFinal).trim();
+        }
+
+        if (newInterim.trim()) {
+            interimWords = newInterim.trim();
+        }
+
+        const words = (finalWords || interimWords).trim();
+
+        if (words) {
+            heardText.textContent = "I heard: " + words;
+            statusText.textContent = "Got it!";
+
+            // Search immediately when the browser confirms the words.
+            if (newFinal.trim()) {
+                searchYouTube(finalWords);
+                return;
+            }
+
+            // If only interim words arrive, search after a short pause.
+            clearTimeout(resultTimer);
+
+            resultTimer = setTimeout(() => {
+                const latest = (finalWords || interimWords).trim();
+
+                if (listening && latest) {
+                    searchYouTube(latest);
+                }
+            }, 1200);
+        }
     };
 
     recognition.onerror = event => {
-        listening = false;
-        talkButton.textContent = "🎤 Talk";
+        if (searching) return;
 
-        const message = event.error === "not-allowed"
-            ? "Allow microphone access!"
-            : "Try again!";
+        resetTalkButton();
+
+        const errors = {
+            "not-allowed": "Allow microphone access in Safari settings.",
+            "service-not-allowed": "Safari blocked voice search.",
+            "no-speech": "Didn't hear anything. Tap Talk or type below.",
+            "audio-capture": "Microphone unavailable. Check microphone access.",
+            "network": "Voice service connection failed. Try again or type below.",
+            "aborted": "Stopped."
+        };
+
+        const message = errors[event.error] ||
+            "Voice search failed. Tap Talk again or type below.";
 
         statusText.textContent = message;
-        say(message);
+
+        if (event.error !== "aborted") say(message);
     };
 
     recognition.onend = () => {
-        listening = false;
-        talkButton.textContent = "🎤 Talk";
+        if (searching) return;
+
+        const words = (finalWords || interimWords).trim();
+
+        if (listening && words) {
+            searchYouTube(words);
+            return;
+        }
+
+        const wasListening = listening;
+        resetTalkButton();
+
+        if (wasListening) {
+            statusText.textContent =
+                "Didn't catch that. Tap Talk again or type below.";
+        }
     };
 
     talkButton.addEventListener("click", () => {
         if (listening) {
-            recognition.stop();
+            const words = (finalWords || interimWords).trim();
+
+            if (words) {
+                searchYouTube(words);
+            } else {
+                try { recognition.stop(); } catch (error) {}
+            }
+
             return;
         }
 
+        clearTimers();
+        searching = false;
+        finalWords = "";
+        interimWords = "";
+
+        heardText.textContent = "";
+        statusText.textContent = "Starting microphone…";
+        talkButton.disabled = true;
+        talkButton.textContent = "🎤 Starting…";
+
+        if ("speechSynthesis" in window) speechSynthesis.cancel();
+
         try {
-            speechSynthesis.cancel();
             recognition.start();
+
+            // Recover if Safari doesn't start listening.
+            setTimeout(() => {
+                if (talkButton.disabled && !listening) {
+                    talkButton.disabled = false;
+                    talkButton.textContent = "🎤 Talk";
+                    statusText.textContent =
+                        "Tap Talk again or type your search below.";
+                }
+            }, 2000);
         } catch (error) {
-            statusText.textContent = "Try again!";
-            say("Try again!");
+            resetTalkButton();
+            statusText.textContent =
+                "Couldn't start the microphone. Tap Talk again or type below.";
         }
     });
 } else {
     talkButton.addEventListener("click", () => {
-        statusText.textContent = "Voice search isn't supported here.";
-        say("Voice search unavailable!");
+        statusText.textContent =
+            "Voice search isn't available. Type below to search.";
+        searchInput.focus();
     });
 }
 </script>
