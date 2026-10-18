@@ -3,475 +3,615 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101522">
 <title>VideoBuddy</title>
 
 <style>
-* { box-sizing: border-box; }
+:root {
+  color-scheme: dark;
+  --bg: #101522;
+  --card: #1d2638;
+  --blue: #8db5ff;
+  --text: #f5f7ff;
+  --muted: #aab5ca;
+}
+
+* {
+  box-sizing: border-box;
+}
 
 body {
-    margin: 0;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-    background: #101522;
-    color: white;
-    text-align: center;
+  margin: 0;
+  padding: 22px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
-main { max-width: 650px; margin: auto; }
-
-h1 { color: #8db5ff; font-size: 36px; }
-h2 { font-size: 22px; }
-
-.card {
-    background: #1d2638;
-    padding: 20px;
-    border-radius: 16px;
-    margin: 18px 0;
+main {
+  max-width: 900px;
+  margin: auto;
 }
 
-button, input {
-    font: inherit;
-    border-radius: 12px;
-    padding: 14px;
+h1 {
+  text-align: center;
+  font-size: 38px;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+
+.panel {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+}
+
+h2 {
+  font-size: 20px;
+  margin-top: 0;
+}
+
+button,
+input {
+  font: inherit;
+  border-radius: 12px;
+  padding: 12px 15px;
 }
 
 button {
-    border: 0;
-    background: #8db5ff;
-    color: #101522;
-    font-weight: bold;
-    cursor: pointer;
-    min-height: 50px;
+  background: var(--blue);
+  color: #101522;
+  border: 0;
+  font-weight: 650;
+  cursor: pointer;
 }
 
-button:disabled { opacity: .65; }
-
-.main-button {
-    display: block;
-    width: 100%;
-    margin: 10px 0;
-    font-size: 18px;
+button:hover {
+  opacity: .86;
 }
 
-.grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
 }
 
-.grid button { width: 100%; }
+button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
 
 input {
-    width: 100%;
-    border: 0;
-    background: white;
-    color: #111;
-    margin: 8px 0;
+  width: 100%;
+  min-width: 0;
+  background: #111a2b;
+  border: 1px solid #45516a;
+  color: white;
+}
+
+.search-row {
+  display: flex;
+  gap: 10px;
+}
+
+.search-row input {
+  flex: 1;
+}
+
+.voice-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+#talk {
+  flex: 1;
+  min-width: 150px;
+}
+
+.secondary {
+  background: #34415a;
+  color: white;
 }
 
 #status {
-    min-height: 24px;
-    color: #d1e0ff;
+  color: var(--blue);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
-#heard { overflow-wrap: anywhere; }
+#heard {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
 
-a { color: #8db5ff; }
+.privacy {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
 
-@media (max-width: 400px) {
-    .grid { grid-template-columns: 1fr; }
-    body { padding: 12px; }
+.categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.category {
+  background: #28354b;
+  color: var(--text);
+  text-align: left;
+  font-weight: 500;
+  min-height: 46px;
+}
+
+footer {
+  text-align: center;
+  margin: 28px 0 10px;
+}
+
+a {
+  color: var(--blue);
+}
+
+@media (max-width: 520px) {
+  body {
+    padding: 12px;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  .search-row {
+    flex-direction: column;
+  }
+
+  .panel {
+    padding: 16px;
+  }
 }
 </style>
 </head>
 
 <body>
 <main>
-    <h1>🎬 VideoBuddy</h1>
-    <p>Find videos you love!</p>
+  <h1>🎬 VideoBuddy</h1>
+  <p class="subtitle">Find your next favorite video.</p>
 
-    <section class="card">
-        <button class="main-button" id="talk">🎤 Talk</button>
-        <button class="main-button" id="toggle">🔊 Speaking: ON</button>
-        <button class="main-button" id="stop">⏹ Stop</button>
-        <p id="status" aria-live="polite">Ready!</p>
-        <p id="heard" aria-live="polite"></p>
-    </section>
+  <section class="panel" aria-labelledby="searchTitle">
+    <h2 id="searchTitle">🔎 Search YouTube</h2>
 
-    <section class="card">
-        <h2>🔎 Search Videos</h2>
-        <form id="searchForm">
-            <input id="searchInput"
-                   placeholder="What do you want to watch?"
-                   aria-label="What do you want to watch?"
-                   autocomplete="off">
-            <button class="main-button" type="submit">Search</button>
-        </form>
-    </section>
+    <form id="searchForm" class="search-row">
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Search videos..."
+        aria-label="Search YouTube"
+        autocomplete="off"
+      >
+      <button type="submit">Search</button>
+    </form>
 
-    <section class="card">
-        <h2>🍜 Food &amp; Eating ASMR</h2>
-        <div class="grid">
-            <button data-query="eating ASMR">🍜 Eating ASMR</button>
-            <button data-query="crunchy food ASMR">🥨 Crunchy Food</button>
-            <button data-query="street food videos">🌮 Street Food</button>
-            <button data-query="Indian food videos">🍛 Indian Food</button>
-            <button data-query="dessert ASMR">🍰 Dessert ASMR</button>
-            <button data-query="chocolate ASMR">🍫 Chocolate</button>
-            <button data-query="cooking videos">🍳 Cooking</button>
-            <button data-query="bakery tours">🥐 Bakeries</button>
-            <button data-query="ice cream videos">🍦 Ice Cream</button>
-            <button data-query="satisfying food videos">🥞 Satisfying Food</button>
-        </div>
-    </section>
+    <div class="voice-row">
+      <button id="talk" type="button">🎤 Start Listening</button>
+      <button id="stop" class="secondary" type="button" disabled>
+        Stop
+      </button>
+    </div>
 
-    <section class="card">
-        <h2>✈️ Travel &amp; Places</h2>
-        <div class="grid">
-            <button data-query="India travel videos">🇮🇳 India</button>
-            <button data-query="Europe travel videos">🇪🇺 Europe</button>
-            <button data-query="Bahamas vacation videos">🏝️ Bahamas</button>
-            <button data-query="beach vacation videos">🏖️ Beaches</button>
-            <button data-query="hotel room tours">🏨 Hotels</button>
-            <button data-query="luxury hotel tours">🛎️ Luxury Hotels</button>
-            <button data-query="airport tours">🛫 Airports</button>
-            <button data-query="airplane cabin tours">💺 Airplane Cabins</button>
-            <button data-query="airline seat reviews">🪑 Airline Seats</button>
-            <button data-query="plane takeoff videos">🛩️ Plane Takeoffs</button>
-            <button data-query="cruise ship tours">🛳️ Cruise Ships</button>
-            <button data-query="scenic train journeys">🚆 Train Journeys</button>
-            <button data-query="theme park tours">🎢 Theme Parks</button>
-            <button data-query="aquarium tours">🐠 Aquariums</button>
-        </div>
-    </section>
+    <p id="status" role="status" aria-live="polite">
+      Ready. Tap Start Listening to use local AI voice search.
+    </p>
 
-    <section class="card">
-        <h2>🐾 Animals &amp; Nature</h2>
-        <div class="grid">
-            <button data-query="funny dog videos">🐶 Dogs</button>
-            <button data-query="funny cat videos">🐱 Cats</button>
-            <button data-query="baby animal videos">🐣 Baby Animals</button>
-            <button data-query="ocean animal videos">🐬 Ocean Animals</button>
-            <button data-query="wildlife documentaries">🦁 Wildlife</button>
-            <button data-query="bird videos">🦜 Birds</button>
-            <button data-query="fish videos">🐟 Fish</button>
-            <button data-query="nature videos">🌳 Nature</button>
-        </div>
-    </section>
+    <p id="heard">Your recognized words will appear here.</p>
 
-    <section class="card">
-        <h2>🎮 More Fun</h2>
-        <div class="grid">
-            <button data-query="cartoons for kids">📺 Cartoons</button>
-            <button data-query="soccer highlights">⚽ Soccer</button>
-            <button data-query="funny videos">😂 Funny Videos</button>
-            <button data-query="satisfying videos">✨ Satisfying Videos</button>
-            <button data-query="science experiments for kids">🔬 Science</button>
-            <button data-query="LEGO building videos">🧱 LEGO</button>
-            <button data-query="car videos">🚗 Cars</button>
-            <button data-query="music videos">🎵 Music</button>
-            <button data-query="water park videos">💦 Water Parks</button>
-            <button data-query="roller coaster POV videos">🎢 Roller Coasters</button>
-        </div>
-    </section>
+    <p class="privacy">
+      🔒 Voice recognition runs on your device. The AI model downloads
+      from an external host when first needed. Your recorded audio is
+      not sent to a speech-recognition service. Opening YouTube sends
+      your search query to YouTube.
+    </p>
+  </section>
 
-    <p><a href="index.html">← Back to TypeFlow</a></p>
+  <section class="panel">
+    <h2>🍿 Food & Eating ASMR</h2>
+    <div class="categories">
+      <button class="category" data-query="Eating ASMR">Eating ASMR</button>
+      <button class="category" data-query="Crunchy Food">Crunchy Food</button>
+      <button class="category" data-query="Street Food">Street Food</button>
+      <button class="category" data-query="Indian Food">Indian Food</button>
+      <button class="category" data-query="Dessert ASMR">Dessert ASMR</button>
+      <button class="category" data-query="Chocolate">Chocolate</button>
+      <button class="category" data-query="Cooking">Cooking</button>
+      <button class="category" data-query="Bakeries">Bakeries</button>
+      <button class="category" data-query="Ice Cream">Ice Cream</button>
+      <button class="category" data-query="Satisfying Food">Satisfying Food</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>✈️ Travel & Places</h2>
+    <div class="categories">
+      <button class="category" data-query="India travel">India</button>
+      <button class="category" data-query="Europe travel">Europe</button>
+      <button class="category" data-query="Bahamas">Bahamas</button>
+      <button class="category" data-query="Beautiful beaches">Beaches</button>
+      <button class="category" data-query="Hotels">Hotels</button>
+      <button class="category" data-query="Luxury hotels">Luxury Hotels</button>
+      <button class="category" data-query="Airports">Airports</button>
+      <button class="category" data-query="Airplane cabins">Airplane Cabins</button>
+      <button class="category" data-query="Airline seats">Airline Seats</button>
+      <button class="category" data-query="Plane takeoffs">Plane Takeoffs</button>
+      <button class="category" data-query="Cruise ships">Cruise Ships</button>
+      <button class="category" data-query="Train journeys">Train Journeys</button>
+      <button class="category" data-query="Theme parks">Theme Parks</button>
+      <button class="category" data-query="Aquariums">Aquariums</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>🐾 Animals & Nature</h2>
+    <div class="categories">
+      <button class="category" data-query="Dogs">Dogs</button>
+      <button class="category" data-query="Cats">Cats</button>
+      <button class="category" data-query="Baby animals">Baby Animals</button>
+      <button class="category" data-query="Ocean animals">Ocean Animals</button>
+      <button class="category" data-query="Wildlife">Wildlife</button>
+      <button class="category" data-query="Birds">Birds</button>
+      <button class="category" data-query="Fish">Fish</button>
+      <button class="category" data-query="Nature">Nature</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>🎮 More Fun</h2>
+    <div class="categories">
+      <button class="category" data-query="Cartoons">Cartoons</button>
+      <button class="category" data-query="Soccer">Soccer</button>
+      <button class="category" data-query="Funny videos">Funny Videos</button>
+      <button class="category" data-query="Satisfying videos">Satisfying Videos</button>
+      <button class="category" data-query="Science">Science</button>
+      <button class="category" data-query="LEGO">LEGO</button>
+      <button class="category" data-query="Cars">Cars</button>
+      <button class="category" data-query="Music">Music</button>
+      <button class="category" data-query="Water parks">Water Parks</button>
+      <button class="category" data-query="Roller coasters">Roller Coasters</button>
+    </div>
+  </section>
+
+  <footer>
+    <a href="index.html">← Back to TypeFlow</a>
+  </footer>
 </main>
 
-<script>
-(() => {
-    "use strict";
+<script type="module">
+import {
+  pipeline,
+  env
+} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2";
 
-    const statusText = document.getElementById("status");
-    const heardText = document.getElementById("heard");
-    const talkButton = document.getElementById("talk");
-    const toggleButton = document.getElementById("toggle");
-    const stopButton = document.getElementById("stop");
-    const searchInput = document.getElementById("searchInput");
+const talkButton = document.getElementById("talk");
+const stopButton = document.getElementById("stop");
+const statusText = document.getElementById("status");
+const heardText = document.getElementById("heard");
+const searchInput = document.getElementById("searchInput");
+const searchForm = document.getElementById("searchForm");
 
-    const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
+let model = null;
+let modelPromise = null;
+let stream = null;
+let recorder = null;
+let chunks = [];
+let isRecording = false;
+let isProcessing = false;
+let taskNumber = 0;
 
-    let recognition = null;
-    let speaking = true;
-    let listening = false;
-    let searching = false;
-    let finalWords = "";
-    let interimWords = "";
-    let session = 0;
-    let listenTimer = null;
-    let navigationTimer = null;
-    let autoSearchTimer = null;
+env.useBrowserCache = true;
+env.allowLocalModels = false;
 
-    function clearTimers() {
-        clearTimeout(listenTimer);
-        clearTimeout(navigationTimer);
-        clearTimeout(autoSearchTimer);
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+function updateButtons() {
+  talkButton.disabled = isRecording || isProcessing;
+  stopButton.disabled = !isRecording;
+}
+
+function stopMicrophone() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+}
+
+function openYouTube(query) {
+  const text = query.trim();
+
+  if (!text) return;
+
+  taskNumber++;
+  stopMicrophone();
+
+  window.location.href =
+    "https://www.youtube.com/results?search_query=" +
+    encodeURIComponent(text);
+}
+
+searchForm.addEventListener("submit", event => {
+  event.preventDefault();
+  openYouTube(searchInput.value);
+});
+
+document.querySelectorAll("[data-query]").forEach(button => {
+  button.addEventListener("click", () => {
+    openYouTube(button.dataset.query);
+  });
+});
+
+async function loadModel() {
+  if (model) return model;
+
+  if (!modelPromise) {
+    modelPromise = (async () => {
+      setStatus(
+        "Loading local AI for the first time. Please wait..."
+      );
+
+      const options = { dtype: "q8" };
+
+      if (navigator.gpu) {
+        options.device = "webgpu";
+      } else {
+        options.device = "wasm";
+      }
+
+      const loaded = await pipeline(
+        "automatic-speech-recognition",
+        "onnx-community/whisper-tiny.en",
+        options
+      );
+
+      model = loaded;
+      return loaded;
+    })();
+  }
+
+  try {
+    return await modelPromise;
+  } catch (error) {
+    modelPromise = null;
+    throw error;
+  }
+}
+
+async function convertAudio(blob) {
+  const AudioContextClass =
+    window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextClass) {
+    throw new Error("Audio processing is not supported in this browser.");
+  }
+
+  const context = new AudioContextClass();
+
+  try {
+    const buffer = await blob.arrayBuffer();
+    const decoded = await context.decodeAudioData(buffer);
+
+    const source = decoded.getChannelData(0);
+    const mono = new Float32Array(decoded.length);
+
+    if (decoded.numberOfChannels === 1) {
+      mono.set(source);
+    } else {
+      for (let channel = 0; channel < decoded.numberOfChannels; channel++) {
+        const data = decoded.getChannelData(channel);
+
+        for (let i = 0; i < data.length; i++) {
+          mono[i] += data[i] / decoded.numberOfChannels;
+        }
+      }
     }
 
-    function resetTalk() {
-        listening = false;
-        talkButton.disabled = false;
-        talkButton.textContent = "🎤 Talk";
+    const targetRate = 16000;
+
+    if (decoded.sampleRate === targetRate) {
+      return mono;
     }
 
-    function cancelRecognition() {
-        session++;
-        clearTimers();
-        listening = false;
-        finalWords = "";
-        interimWords = "";
+    const length = Math.floor(
+      mono.length * targetRate / decoded.sampleRate
+    );
 
-        if (recognition) {
-            try { recognition.abort(); } catch (error) {}
-        }
+    const output = new Float32Array(length);
+    const ratio = decoded.sampleRate / targetRate;
+
+    for (let i = 0; i < length; i++) {
+      const position = i * ratio;
+      const left = Math.floor(position);
+      const right = Math.min(left + 1, mono.length - 1);
+      const fraction = position - left;
+
+      output[i] =
+        mono[left] * (1 - fraction) +
+        mono[right] * fraction;
     }
 
-    function searchYouTube(query, announce = false) {
-        query = (query || "").trim();
+    return output;
+  } finally {
+    await context.close();
+  }
+}
 
-        if (!query) {
-            statusText.textContent = "Say or type something to search!";
-            return;
-        }
+function supportedMimeType() {
+  if (!window.MediaRecorder) return "";
 
-        // Every new search replaces any previous pending search.
-        searching = true;
-        cancelRecognition();
-        resetTalk();
+  const types = [
+    "audio/mp4",
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus"
+  ];
 
-        if (window.speechSynthesis) {
-            speechSynthesis.cancel();
-        }
+  return types.find(type => MediaRecorder.isTypeSupported(type)) || "";
+}
 
-        statusText.textContent = "Opening YouTube...";
-        heardText.textContent = "Search: " + query;
+async function startListening() {
+  if (isRecording || isProcessing) return;
 
-        const url =
-            "https://www.youtube.com/results?search_query=" +
-            encodeURIComponent(query);
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setStatus(
+      "Microphone unavailable. Open this page through HTTPS or localhost."
+    );
+    return;
+  }
 
-        // Navigate immediately; don't wait for a spoken announcement.
-        if (announce && speaking && window.speechSynthesis) {
-            const utterance = new SpeechSynthesisUtterance("Searching!");
-            utterance.lang = "en-US";
-            speechSynthesis.speak(utterance);
-        }
+  try {
+    setStatus("Requesting microphone permission...");
 
-        window.location.href = url;
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+
+    chunks = [];
+
+    const mimeType = supportedMimeType();
+
+    recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+
+    recorder.addEventListener("dataavailable", event => {
+      if (event.data?.size) chunks.push(event.data);
+    });
+
+    recorder.addEventListener("stop", transcribeRecording, {
+      once: true
+    });
+
+    recorder.start();
+
+    isRecording = true;
+    updateButtons();
+
+    talkButton.textContent = "🎤 Listening...";
+    setStatus("Listening! Say your search, then tap Stop.");
+    heardText.textContent = "";
+  } catch (error) {
+    stopMicrophone();
+
+    setStatus(
+      "Couldn't start the microphone: " +
+      (error.message || "Permission denied.")
+    );
+  }
+}
+
+function stopListening() {
+  if (!isRecording || !recorder) return;
+
+  isRecording = false;
+
+  talkButton.textContent = "🎤 Start Listening";
+  updateButtons();
+
+  setStatus("Preparing your recording...");
+  stopMicrophone();
+
+  if (recorder.state !== "inactive") {
+    recorder.stop();
+  }
+}
+
+async function transcribeRecording() {
+  const currentTask = ++taskNumber;
+
+  isProcessing = true;
+  updateButtons();
+
+  try {
+    const blob = new Blob(chunks, {
+      type: recorder?.mimeType || "audio/webm"
+    });
+
+    chunks = [];
+
+    if (!blob.size) {
+      throw new Error("No audio recorded. Please try again.");
     }
 
-    toggleButton.addEventListener("click", () => {
-        speaking = !speaking;
+    setStatus("Loading local AI...");
+    const speechModel = await loadModel();
 
-        if (window.speechSynthesis) {
-            speechSynthesis.cancel();
-        }
+    if (currentTask !== taskNumber) return;
 
-        toggleButton.textContent = speaking
-            ? "🔊 Speaking: ON"
-            : "🔇 Speaking: OFF";
+    setStatus("Recognizing speech on your device...");
 
-        if (speaking && window.speechSynthesis) {
-            const utterance = new SpeechSynthesisUtterance("Speaking on");
-            speechSynthesis.speak(utterance);
-        }
+    const audio = await convertAudio(blob);
+
+    if (currentTask !== taskNumber) return;
+
+    const result = await speechModel(audio, {
+      sampling_rate: 16000,
+      language: "english",
+      task: "transcribe"
     });
 
-    stopButton.addEventListener("click", () => {
-        cancelRecognition();
-        searching = false;
+    if (currentTask !== taskNumber) return;
 
-        if (window.speechSynthesis) {
-            speechSynthesis.cancel();
-        }
+    const transcript = (result.text || "").trim();
 
-        resetTalk();
-        statusText.textContent = "Stopped.";
-        heardText.textContent = "";
-    });
-
-    document.getElementById("searchForm").addEventListener("submit", event => {
-        event.preventDefault();
-        searchYouTube(searchInput.value);
-    });
-
-    // Clicking a different category immediately uses that category.
-    document.querySelectorAll("[data-query]").forEach(button => {
-        button.addEventListener("click", () => {
-            searchYouTube(button.dataset.query);
-        });
-    });
-
-    if (!SpeechRecognition) {
-        talkButton.addEventListener("click", () => {
-            statusText.textContent =
-                "Voice search isn't supported in this browser. Type your search instead.";
-            searchInput.focus();
-        });
-        return;
+    if (!transcript) {
+      setStatus("Didn't catch that. Try speaking a little louder.");
+      heardText.textContent = "No words recognized.";
+      return;
     }
 
-    recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    heardText.textContent = "Heard: " + transcript;
+    searchInput.value = transcript;
+    setStatus("Search recognized! Opening YouTube...");
 
-    recognition.onstart = () => {
-        listening = true;
-        searching = false;
-        finalWords = "";
-        interimWords = "";
+    window.setTimeout(() => {
+      if (currentTask === taskNumber) {
+        window.location.href =
+          "https://www.youtube.com/results?search_query=" +
+          encodeURIComponent(transcript);
+      }
+    }, 500);
 
-        talkButton.disabled = false;
-        talkButton.textContent = "🎤 Listening...";
-        statusText.textContent = "Listening! Say what you want to watch.";
-        heardText.textContent = "";
+  } catch (error) {
+    console.error(error);
 
-        const thisSession = session;
+    setStatus(
+      "Local AI error: " +
+      (error.message || "Unknown error") +
+      ". You can still search by typing."
+    );
+  } finally {
+    isProcessing = false;
+    talkButton.textContent = "🎤 Start Listening";
+    updateButtons();
+  }
+}
 
-        // Fallback only. Final speech results trigger search sooner.
-        listenTimer = setTimeout(() => {
-            if (!listening || thisSession !== session) return;
+talkButton.addEventListener("click", startListening);
+stopButton.addEventListener("click", stopListening);
 
-            const words = (finalWords || interimWords).trim();
-
-            if (words) {
-                searchYouTube(words);
-            } else {
-                try { recognition.stop(); } catch (error) {}
-                resetTalk();
-                statusText.textContent =
-                    "Didn't catch that. Tap Talk and try again.";
-            }
-        }, 5000);
-    };
-
-    recognition.onresult = event => {
-        if (!listening || searching) return;
-
-        let interim = "";
-        let final = "";
-
-        for (let i = 0; i < event.results.length; i++) {
-            const result = event.results[i];
-            const transcript = result[0].transcript.trim();
-
-            if (!transcript) continue;
-
-            if (result.isFinal) {
-                final += transcript + " ";
-            } else {
-                interim += transcript + " ";
-            }
-        }
-
-        if (final.trim()) {
-            finalWords = final.trim();
-        }
-
-        if (interim.trim()) {
-            interimWords = interim.trim();
-        }
-
-        const words = (finalWords || interimWords).trim();
-
-        if (!words) return;
-
-        heardText.textContent = "I heard: " + words;
-        statusText.textContent = "Recognizing your search...";
-
-        // KEY FIX: immediately search when the browser gives a final result.
-        const latestResult = event.results[event.results.length - 1];
-
-        if (latestResult && latestResult.isFinal) {
-            clearTimeout(listenTimer);
-            clearTimeout(autoSearchTimer);
-
-            const query = finalWords || words;
-            searchYouTube(query);
-        } else {
-            // If only interim results arrive, search shortly after speech pauses.
-            clearTimeout(autoSearchTimer);
-            const thisSession = session;
-
-            autoSearchTimer = setTimeout(() => {
-                if (!listening || searching || thisSession !== session) return;
-
-                const query = (finalWords || interimWords).trim();
-
-                if (query) {
-                    searchYouTube(query);
-                }
-            }, 900);
-        }
-    };
-
-    recognition.onerror = event => {
-        if (searching) return;
-
-        clearTimers();
-        resetTalk();
-
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            statusText.textContent =
-                "Microphone access is blocked. Allow microphone access in your browser settings.";
-        } else if (event.error === "no-speech") {
-            statusText.textContent = "No speech detected. Tap Talk and try again.";
-        } else if (event.error !== "aborted") {
-            statusText.textContent =
-                "Voice search had a problem. Try again or type your search.";
-        }
-    };
-
-    recognition.onend = () => {
-        if (searching) return;
-
-        const query = (finalWords || interimWords).trim();
-
-        if (listening && query) {
-            searchYouTube(query);
-            return;
-        }
-
-        resetTalk();
-    };
-
-    talkButton.addEventListener("click", () => {
-        if (listening) {
-            const query = (finalWords || interimWords).trim();
-
-            if (query) {
-                searchYouTube(query);
-            } else {
-                clearTimers();
-                try { recognition.stop(); } catch (error) {}
-                resetTalk();
-                statusText.textContent = "Stopped listening.";
-            }
-
-            return;
-        }
-
-        cancelRecognition();
-        searching = false;
-
-        if (window.speechSynthesis) {
-            speechSynthesis.cancel();
-        }
-
-        const thisSession = session;
-
-        try {
-            recognition.start();
-        } catch (error) {
-            statusText.textContent =
-                "Couldn't start the microphone. Wait a moment and try again.";
-            resetTalk();
-        }
-    });
-})();
+window.addEventListener("pagehide", stopMicrophone);
 </script>
 </body>
 </html>
