@@ -35,7 +35,7 @@ main {
 
 h1 {
   text-align: center;
-  font-size: 38px;
+  font-size: 36px;
   margin-bottom: 8px;
 }
 
@@ -73,7 +73,7 @@ button {
 }
 
 button:hover {
-  opacity: .86;
+  opacity: .88;
 }
 
 button:focus-visible,
@@ -107,8 +107,8 @@ input {
 
 .voice-row {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 10px;
   margin-top: 14px;
 }
 
@@ -133,12 +133,6 @@ input {
   overflow-wrap: anywhere;
 }
 
-.privacy {
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
 .categories {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -150,7 +144,13 @@ input {
   color: var(--text);
   text-align: left;
   font-weight: 500;
-  min-height: 46px;
+  min-height: 44px;
+}
+
+.privacy {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 footer {
@@ -171,12 +171,20 @@ a {
     font-size: 32px;
   }
 
+  .panel {
+    padding: 16px;
+  }
+
   .search-row {
     flex-direction: column;
   }
+}
 
-  .panel {
-    padding: 16px;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
   }
 }
 </style>
@@ -187,8 +195,8 @@ a {
   <h1>🎬 VideoBuddy</h1>
   <p class="subtitle">Find your next favorite video.</p>
 
-  <section class="panel" aria-labelledby="searchTitle">
-    <h2 id="searchTitle">🔎 Search YouTube</h2>
+  <section class="panel">
+    <h2>🔎 Search YouTube</h2>
 
     <form id="searchForm" class="search-row">
       <input
@@ -209,16 +217,15 @@ a {
     </div>
 
     <p id="status" role="status" aria-live="polite">
-      Ready. Tap Start Listening to use local AI voice search.
+      Ready when you are.
     </p>
 
-    <p id="heard">Your recognized words will appear here.</p>
+    <p id="heard"></p>
 
     <p class="privacy">
-      🔒 Voice recognition runs on your device. The AI model downloads
-      from an external host when first needed. Your recorded audio is
-      not sent to a speech-recognition service. Opening YouTube sends
-      your search query to YouTube.
+      Voice search uses the recognition service provided by your browser
+      when available. Depending on your browser and settings, audio may
+      be processed by the browser provider. You can always type instead.
     </p>
   </section>
 
@@ -293,325 +300,202 @@ a {
   </footer>
 </main>
 
-<script type="module">
-import {
-  pipeline,
-  env
-} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2";
+<script>
+(() => {
+  const talkButton = document.getElementById("talk");
+  const stopButton = document.getElementById("stop");
+  const status = document.getElementById("status");
+  const heard = document.getElementById("heard");
+  const input = document.getElementById("searchInput");
+  const form = document.getElementById("searchForm");
 
-const talkButton = document.getElementById("talk");
-const stopButton = document.getElementById("stop");
-const statusText = document.getElementById("status");
-const heardText = document.getElementById("heard");
-const searchInput = document.getElementById("searchInput");
-const searchForm = document.getElementById("searchForm");
+  const Recognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
 
-let model = null;
-let modelPromise = null;
-let stream = null;
-let recorder = null;
-let chunks = [];
-let isRecording = false;
-let isProcessing = false;
-let taskNumber = 0;
+  let recognition = null;
+  let listening = false;
+  let navigating = false;
+  let latestTranscript = "";
+  let restartTimer = null;
 
-env.useBrowserCache = true;
-env.allowLocalModels = false;
-
-function setStatus(message) {
-  statusText.textContent = message;
-}
-
-function updateButtons() {
-  talkButton.disabled = isRecording || isProcessing;
-  stopButton.disabled = !isRecording;
-}
-
-function stopMicrophone() {
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
+  function setStatus(message) {
+    status.textContent = message;
   }
-}
 
-function openYouTube(query) {
-  const text = query.trim();
+  function searchYouTube(query) {
+    const text = query.trim();
+    if (!text) return;
 
-  if (!text) return;
+    navigating = true;
+    listening = false;
+    clearTimeout(restartTimer);
 
-  taskNumber++;
-  stopMicrophone();
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (_) {}
+    }
 
-  window.location.href =
-    "https://www.youtube.com/results?search_query=" +
-    encodeURIComponent(text);
-}
+    window.location.href =
+      "https://www.youtube.com/results?search_query=" +
+      encodeURIComponent(text);
+  }
 
-searchForm.addEventListener("submit", event => {
-  event.preventDefault();
-  openYouTube(searchInput.value);
-});
-
-document.querySelectorAll("[data-query]").forEach(button => {
-  button.addEventListener("click", () => {
-    openYouTube(button.dataset.query);
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    searchYouTube(input.value);
   });
-});
 
-async function loadModel() {
-  if (model) return model;
-
-  if (!modelPromise) {
-    modelPromise = (async () => {
-      setStatus(
-        "Loading local AI for the first time. Please wait..."
-      );
-
-      const options = { dtype: "q8" };
-
-      if (navigator.gpu) {
-        options.device = "webgpu";
-      } else {
-        options.device = "wasm";
-      }
-
-      const loaded = await pipeline(
-        "automatic-speech-recognition",
-        "onnx-community/whisper-tiny.en",
-        options
-      );
-
-      model = loaded;
-      return loaded;
-    })();
-  }
-
-  try {
-    return await modelPromise;
-  } catch (error) {
-    modelPromise = null;
-    throw error;
-  }
-}
-
-async function convertAudio(blob) {
-  const AudioContextClass =
-    window.AudioContext || window.webkitAudioContext;
-
-  if (!AudioContextClass) {
-    throw new Error("Audio processing is not supported in this browser.");
-  }
-
-  const context = new AudioContextClass();
-
-  try {
-    const buffer = await blob.arrayBuffer();
-    const decoded = await context.decodeAudioData(buffer);
-
-    const source = decoded.getChannelData(0);
-    const mono = new Float32Array(decoded.length);
-
-    if (decoded.numberOfChannels === 1) {
-      mono.set(source);
-    } else {
-      for (let channel = 0; channel < decoded.numberOfChannels; channel++) {
-        const data = decoded.getChannelData(channel);
-
-        for (let i = 0; i < data.length; i++) {
-          mono[i] += data[i] / decoded.numberOfChannels;
-        }
-      }
-    }
-
-    const targetRate = 16000;
-
-    if (decoded.sampleRate === targetRate) {
-      return mono;
-    }
-
-    const length = Math.floor(
-      mono.length * targetRate / decoded.sampleRate
-    );
-
-    const output = new Float32Array(length);
-    const ratio = decoded.sampleRate / targetRate;
-
-    for (let i = 0; i < length; i++) {
-      const position = i * ratio;
-      const left = Math.floor(position);
-      const right = Math.min(left + 1, mono.length - 1);
-      const fraction = position - left;
-
-      output[i] =
-        mono[left] * (1 - fraction) +
-        mono[right] * fraction;
-    }
-
-    return output;
-  } finally {
-    await context.close();
-  }
-}
-
-function supportedMimeType() {
-  if (!window.MediaRecorder) return "";
-
-  const types = [
-    "audio/mp4",
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/ogg;codecs=opus"
-  ];
-
-  return types.find(type => MediaRecorder.isTypeSupported(type)) || "";
-}
-
-async function startListening() {
-  if (isRecording || isProcessing) return;
-
-  if (!navigator.mediaDevices?.getUserMedia) {
-    setStatus(
-      "Microphone unavailable. Open this page through HTTPS or localhost."
-    );
-    return;
-  }
-
-  try {
-    setStatus("Requesting microphone permission...");
-
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
+  document.querySelectorAll("[data-query]").forEach(button => {
+    button.addEventListener("click", () => {
+      searchYouTube(button.dataset.query);
     });
+  });
 
-    chunks = [];
+  function updateButtons() {
+    talkButton.disabled = listening;
+    stopButton.disabled = !listening;
+    talkButton.textContent = listening
+      ? "🎤 Listening..."
+      : "🎤 Start Listening";
+  }
 
-    const mimeType = supportedMimeType();
-
-    recorder = mimeType
-      ? new MediaRecorder(stream, { mimeType })
-      : new MediaRecorder(stream);
-
-    recorder.addEventListener("dataavailable", event => {
-      if (event.data?.size) chunks.push(event.data);
-    });
-
-    recorder.addEventListener("stop", transcribeRecording, {
-      once: true
-    });
-
-    recorder.start();
-
-    isRecording = true;
+  function stopListening(message = "Listening stopped.") {
+    listening = false;
+    clearTimeout(restartTimer);
     updateButtons();
 
-    talkButton.textContent = "🎤 Listening...";
-    setStatus("Listening! Say your search, then tap Stop.");
-    heardText.textContent = "";
-  } catch (error) {
-    stopMicrophone();
-
-    setStatus(
-      "Couldn't start the microphone: " +
-      (error.message || "Permission denied.")
-    );
-  }
-}
-
-function stopListening() {
-  if (!isRecording || !recorder) return;
-
-  isRecording = false;
-
-  talkButton.textContent = "🎤 Start Listening";
-  updateButtons();
-
-  setStatus("Preparing your recording...");
-  stopMicrophone();
-
-  if (recorder.state !== "inactive") {
-    recorder.stop();
-  }
-}
-
-async function transcribeRecording() {
-  const currentTask = ++taskNumber;
-
-  isProcessing = true;
-  updateButtons();
-
-  try {
-    const blob = new Blob(chunks, {
-      type: recorder?.mimeType || "audio/webm"
-    });
-
-    chunks = [];
-
-    if (!blob.size) {
-      throw new Error("No audio recorded. Please try again.");
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (_) {}
     }
 
-    setStatus("Loading local AI...");
-    const speechModel = await loadModel();
+    setStatus(message);
+  }
 
-    if (currentTask !== taskNumber) return;
-
-    setStatus("Recognizing speech on your device...");
-
-    const audio = await convertAudio(blob);
-
-    if (currentTask !== taskNumber) return;
-
-    const result = await speechModel(audio, {
-      sampling_rate: 16000,
-      language: "english",
-      task: "transcribe"
-    });
-
-    if (currentTask !== taskNumber) return;
-
-    const transcript = (result.text || "").trim();
-
-    if (!transcript) {
-      setStatus("Didn't catch that. Try speaking a little louder.");
-      heardText.textContent = "No words recognized.";
+  function startListening() {
+    if (!Recognition) {
+      setStatus(
+        "Voice search isn't supported in this browser. Please use text search."
+      );
       return;
     }
 
-    heardText.textContent = "Heard: " + transcript;
-    searchInput.value = transcript;
-    setStatus("Search recognized! Opening YouTube...");
+    if (listening) return;
 
-    window.setTimeout(() => {
-      if (currentTask === taskNumber) {
-        window.location.href =
-          "https://www.youtube.com/results?search_query=" +
-          encodeURIComponent(transcript);
+    navigating = false;
+    latestTranscript = "";
+
+    recognition = new Recognition();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      listening = true;
+      updateButtons();
+      setStatus("Listening. Speak your search...");
+    };
+
+    recognition.onresult = event => {
+      let finalText = "";
+      let interimText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const text = result[0].transcript.trim();
+
+        if (result.isFinal) {
+          finalText += text + " ";
+        } else {
+          interimText += text + " ";
+        }
       }
-    }, 500);
 
-  } catch (error) {
-    console.error(error);
+      if (finalText.trim()) {
+        latestTranscript = finalText.trim();
+        input.value = latestTranscript;
+        heard.textContent = "Heard: " + latestTranscript;
+        setStatus("Search recognized. Opening YouTube...");
 
-    setStatus(
-      "Local AI error: " +
-      (error.message || "Unknown error") +
-      ". You can still search by typing."
-    );
-  } finally {
-    isProcessing = false;
-    talkButton.textContent = "🎤 Start Listening";
-    updateButtons();
+        // Search immediately when the browser provides final text.
+        searchYouTube(latestTranscript);
+        return;
+      }
+
+      if (interimText.trim()) {
+        input.value = interimText.trim();
+        heard.textContent = "Hearing: " + interimText.trim();
+        setStatus("Listening...");
+      }
+    };
+
+    recognition.onerror = event => {
+      if (navigating) return;
+
+      if (event.error === "not-allowed" ||
+          event.error === "service-not-allowed") {
+        stopListening("Microphone permission was denied. Check browser settings.");
+      } else if (event.error === "no-speech") {
+        setStatus("Didn't hear anything. Try again.");
+      } else if (event.error === "network") {
+        stopListening("Speech recognition needs a working network connection.");
+      } else if (event.error !== "aborted") {
+        stopListening("Voice search stopped: " + event.error);
+      }
+    };
+
+    recognition.onend = () => {
+      if (navigating) return;
+
+      // Some browsers end a continuous session automatically.
+      // Restart only while the user still wants to listen.
+      if (listening) {
+        restartTimer = setTimeout(() => {
+          if (!listening || navigating) return;
+
+          try {
+            recognition.start();
+          } catch (_) {
+            stopListening("Ready to try again.");
+          }
+        }, 150);
+      } else {
+        updateButtons();
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (error) {
+      stopListening("Couldn't start voice search. Please try again.");
+    }
   }
-}
 
-talkButton.addEventListener("click", startListening);
-stopButton.addEventListener("click", stopListening);
+  talkButton.addEventListener("click", startListening);
 
-window.addEventListener("pagehide", stopMicrophone);
+  stopButton.addEventListener("click", () => {
+    stopListening(
+      latestTranscript
+        ? "Stopped listening."
+        : "Stopped. You can type a search instead."
+    );
+  });
+
+  window.addEventListener("pagehide", () => {
+    listening = false;
+    clearTimeout(restartTimer);
+
+    if (recognition) {
+      try {
+        recognition.abort();
+      } catch (_) {}
+    }
+  });
+})();
 </script>
 </body>
 </html>
