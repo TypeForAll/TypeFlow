@@ -189,161 +189,130 @@ a { color: #8db5ff; }
     const stopButton = document.getElementById("stop");
     const searchInput = document.getElementById("searchInput");
 
-    const Recognition =
+    const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
 
     let recognition = null;
     let speaking = true;
     let listening = false;
-    let finishing = false;
     let searching = false;
     let finalWords = "";
     let interimWords = "";
-    let recognitionEnded = false;
-    let listenTimer = null;
-    let finishTimer = null;
-    let searchTimer = null;
     let session = 0;
+    let listenTimer = null;
+    let navigationTimer = null;
+    let autoSearchTimer = null;
 
     function clearTimers() {
         clearTimeout(listenTimer);
-        clearTimeout(finishTimer);
-        clearTimeout(searchTimer);
+        clearTimeout(navigationTimer);
+        clearTimeout(autoSearchTimer);
     }
 
-    function say(text, callback) {
-        if (!speaking || !window.speechSynthesis) {
-            if (callback) callback();
-            return;
-        }
-
-        speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "en-US";
-        utterance.rate = 1.05;
-
-        if (callback) {
-            utterance.onend = callback;
-            utterance.onerror = callback;
-        }
-
-        speechSynthesis.speak(utterance);
-    }
-
-    function getWords() {
-        return (finalWords || interimWords).trim();
-    }
-
-    function resetButton() {
+    function resetTalk() {
         listening = false;
-        finishing = false;
         talkButton.disabled = false;
         talkButton.textContent = "🎤 Talk";
     }
 
-    function searchYouTube(query) {
-        query = (query || "").trim();
-
-        if (!query || searching) return;
-
-        searching = true;
-        listening = false;
-        finishing = false;
-
-        clearTimers();
-        resetButton();
-
-        if (recognition) {
-            try { recognition.abort(); } catch (error) {}
-        }
-
-        if (window.speechSynthesis) speechSynthesis.cancel();
-
-        statusText.textContent = "Searching YouTube...";
-        heardText.textContent = "You said: " + query;
-
-        const url =
-            "https://www.youtube.com/results?search_query=" +
-            encodeURIComponent(query);
-
-        const go = () => {
-            if (!searching) return;
-            searching = false;
-            window.location.href = url;
-        };
-
-        if (speaking && window.speechSynthesis) {
-            const utterance = new SpeechSynthesisUtterance("Searching!");
-            utterance.lang = "en-US";
-            utterance.onend = go;
-            utterance.onerror = go;
-            speechSynthesis.speak(utterance);
-
-            searchTimer = setTimeout(go, 1500);
-        } else {
-            go();
-        }
-    }
-
-    // Typed search.
-    document.getElementById("searchForm").addEventListener("submit", event => {
-        event.preventDefault();
-        searchYouTube(searchInput.value);
-    });
-
-    // Category search buttons.
-    document.querySelectorAll("[data-query]").forEach(button => {
-        button.addEventListener("click", () => {
-            searchYouTube(button.dataset.query);
-        });
-    });
-
-    // Speaking toggle.
-    toggleButton.addEventListener("click", () => {
-        speaking = !speaking;
-
-        if (window.speechSynthesis) speechSynthesis.cancel();
-
-        toggleButton.textContent = speaking
-            ? "🔊 Speaking: ON"
-            : "🔇 Speaking: OFF";
-
-        if (speaking) say("Speaking on");
-    });
-
-    // Stop cancels listening and any pending search.
-    stopButton.addEventListener("click", () => {
+    function cancelRecognition() {
         session++;
         clearTimers();
-
-        searching = false;
         listening = false;
-        finishing = false;
         finalWords = "";
         interimWords = "";
 
         if (recognition) {
             try { recognition.abort(); } catch (error) {}
         }
+    }
 
-        if (window.speechSynthesis) speechSynthesis.cancel();
+    function searchYouTube(query, announce = false) {
+        query = (query || "").trim();
 
-        resetButton();
+        if (!query) {
+            statusText.textContent = "Say or type something to search!";
+            return;
+        }
+
+        // Every new search replaces any previous pending search.
+        searching = true;
+        cancelRecognition();
+        resetTalk();
+
+        if (window.speechSynthesis) {
+            speechSynthesis.cancel();
+        }
+
+        statusText.textContent = "Opening YouTube...";
+        heardText.textContent = "Search: " + query;
+
+        const url =
+            "https://www.youtube.com/results?search_query=" +
+            encodeURIComponent(query);
+
+        // Navigate immediately; don't wait for a spoken announcement.
+        if (announce && speaking && window.speechSynthesis) {
+            const utterance = new SpeechSynthesisUtterance("Searching!");
+            utterance.lang = "en-US";
+            speechSynthesis.speak(utterance);
+        }
+
+        window.location.href = url;
+    }
+
+    toggleButton.addEventListener("click", () => {
+        speaking = !speaking;
+
+        if (window.speechSynthesis) {
+            speechSynthesis.cancel();
+        }
+
+        toggleButton.textContent = speaking
+            ? "🔊 Speaking: ON"
+            : "🔇 Speaking: OFF";
+
+        if (speaking && window.speechSynthesis) {
+            const utterance = new SpeechSynthesisUtterance("Speaking on");
+            speechSynthesis.speak(utterance);
+        }
+    });
+
+    stopButton.addEventListener("click", () => {
+        cancelRecognition();
+        searching = false;
+
+        if (window.speechSynthesis) {
+            speechSynthesis.cancel();
+        }
+
+        resetTalk();
         statusText.textContent = "Stopped.";
         heardText.textContent = "";
     });
 
-    if (!Recognition) {
+    document.getElementById("searchForm").addEventListener("submit", event => {
+        event.preventDefault();
+        searchYouTube(searchInput.value);
+    });
+
+    // Clicking a different category immediately uses that category.
+    document.querySelectorAll("[data-query]").forEach(button => {
+        button.addEventListener("click", () => {
+            searchYouTube(button.dataset.query);
+        });
+    });
+
+    if (!SpeechRecognition) {
         talkButton.addEventListener("click", () => {
             statusText.textContent =
-                "Voice recognition isn't supported here. Type your search below.";
+                "Voice search isn't supported in this browser. Type your search instead.";
             searchInput.focus();
         });
         return;
     }
 
-    recognition = new Recognition();
+    recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = true;
@@ -351,8 +320,7 @@ a { color: #8db5ff; }
 
     recognition.onstart = () => {
         listening = true;
-        finishing = false;
-        recognitionEnded = false;
+        searching = false;
         finalWords = "";
         interimWords = "";
 
@@ -361,166 +329,146 @@ a { color: #8db5ff; }
         statusText.textContent = "Listening! Say what you want to watch.";
         heardText.textContent = "";
 
-        const currentSession = session;
+        const thisSession = session;
 
+        // Fallback only. Final speech results trigger search sooner.
         listenTimer = setTimeout(() => {
-            if (!listening || currentSession !== session) return;
+            if (!listening || thisSession !== session) return;
 
-            const words = getWords();
+            const words = (finalWords || interimWords).trim();
 
             if (words) {
                 searchYouTube(words);
             } else {
                 try { recognition.stop(); } catch (error) {}
-                resetButton();
+                resetTalk();
                 statusText.textContent =
                     "Didn't catch that. Tap Talk and try again.";
             }
-        }, 15000);
+        }, 5000);
     };
 
     recognition.onresult = event => {
-        if (searching) return;
+        if (!listening || searching) return;
 
-        let finals = "";
         let interim = "";
+        let final = "";
 
         for (let i = 0; i < event.results.length; i++) {
             const result = event.results[i];
-            const phrase = result[0].transcript.trim();
+            const transcript = result[0].transcript.trim();
 
-            if (!phrase) continue;
+            if (!transcript) continue;
 
             if (result.isFinal) {
-                finals += phrase + " ";
+                final += transcript + " ";
             } else {
-                interim += phrase + " ";
+                interim += transcript + " ";
             }
         }
 
-        if (finals.trim()) finalWords = finals.trim();
-        if (interim.trim()) interimWords = interim.trim();
+        if (final.trim()) {
+            finalWords = final.trim();
+        }
 
-        const words = getWords();
+        if (interim.trim()) {
+            interimWords = interim.trim();
+        }
 
-        if (words) {
-            heardText.textContent = "I heard: " + words;
-            statusText.textContent = finishing
-                ? "Finishing your search..."
-                : "I heard you! Press Talk again to search.";
+        const words = (finalWords || interimWords).trim();
+
+        if (!words) return;
+
+        heardText.textContent = "I heard: " + words;
+        statusText.textContent = "Recognizing your search...";
+
+        // KEY FIX: immediately search when the browser gives a final result.
+        const latestResult = event.results[event.results.length - 1];
+
+        if (latestResult && latestResult.isFinal) {
+            clearTimeout(listenTimer);
+            clearTimeout(autoSearchTimer);
+
+            const query = finalWords || words;
+            searchYouTube(query);
+        } else {
+            // If only interim results arrive, search shortly after speech pauses.
+            clearTimeout(autoSearchTimer);
+            const thisSession = session;
+
+            autoSearchTimer = setTimeout(() => {
+                if (!listening || searching || thisSession !== session) return;
+
+                const query = (finalWords || interimWords).trim();
+
+                if (query) {
+                    searchYouTube(query);
+                }
+            }, 900);
         }
     };
 
     recognition.onerror = event => {
         if (searching) return;
 
-        const words = getWords();
-
-        if (words && (listening || finishing)) {
-            searchYouTube(words);
-            return;
-        }
-
         clearTimers();
-        resetButton();
+        resetTalk();
 
-        const messages = {
-            "not-allowed": "Microphone access was blocked.",
-            "service-not-allowed": "Safari blocked the speech service.",
-            "no-speech": "I didn't hear anything. Try again.",
-            "audio-capture": "Couldn't access the microphone.",
-            "network": "Voice recognition network error. Try again.",
-            "aborted": "Listening cancelled."
-        };
-
-        statusText.textContent = messages[event.error] ||
-            "Voice search failed. Please try again.";
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            statusText.textContent =
+                "Microphone access is blocked. Allow microphone access in your browser settings.";
+        } else if (event.error === "no-speech") {
+            statusText.textContent = "No speech detected. Tap Talk and try again.";
+        } else if (event.error !== "aborted") {
+            statusText.textContent =
+                "Voice search had a problem. Try again or type your search.";
+        }
     };
 
     recognition.onend = () => {
-        recognitionEnded = true;
-        clearTimeout(listenTimer);
-
         if (searching) return;
 
-        const words = getWords();
+        const query = (finalWords || interimWords).trim();
 
-        if (words && (listening || finishing)) {
-            searchYouTube(words);
+        if (listening && query) {
+            searchYouTube(query);
             return;
         }
 
-        resetButton();
-
-        if (statusText.textContent !== "Stopped.") {
-            statusText.textContent =
-                "Didn't catch that. Tap Talk and try again.";
-        }
+        resetTalk();
     };
 
     talkButton.addEventListener("click", () => {
-        if (searching) return;
+        if (listening) {
+            const query = (finalWords || interimWords).trim();
 
-        if (listening && !finishing) {
-            finishing = true;
-            statusText.textContent = "Finishing your search...";
-            talkButton.textContent = "⏳ Processing...";
-
-            clearTimeout(listenTimer);
-
-            const words = getWords();
-
-            if (words) {
-                searchYouTube(words);
-                return;
+            if (query) {
+                searchYouTube(query);
+            } else {
+                clearTimers();
+                try { recognition.stop(); } catch (error) {}
+                resetTalk();
+                statusText.textContent = "Stopped listening.";
             }
-
-            try {
-                recognition.stop();
-            } catch (error) {
-                resetButton();
-                statusText.textContent = "Tap Talk to try again.";
-                return;
-            }
-
-            finishTimer = setTimeout(() => {
-                if (searching || !finishing) return;
-
-                const latest = getWords();
-
-                if (latest) {
-                    searchYouTube(latest);
-                } else {
-                    resetButton();
-                    statusText.textContent =
-                        "No words were recognized. Try again or type below.";
-                }
-            }, 3000);
 
             return;
         }
 
-        if (finishing || talkButton.disabled) return;
-
-        clearTimers();
-        session++;
+        cancelRecognition();
         searching = false;
-        finalWords = "";
-        interimWords = "";
 
-        if (window.speechSynthesis) speechSynthesis.cancel();
+        if (window.speechSynthesis) {
+            speechSynthesis.cancel();
+        }
 
-        talkButton.disabled = true;
-        talkButton.textContent = "🎤 Starting...";
-        statusText.textContent = "Starting microphone...";
-        heardText.textContent = "";
+        const thisSession = session;
 
         try {
             recognition.start();
         } catch (error) {
-            resetButton();
             statusText.textContent =
-                "Couldn't start voice search. Wait a moment and try again.";
+                "Couldn't start the microphone. Wait a moment and try again.";
+            resetTalk();
         }
     });
 })();
