@@ -1,17 +1,180 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TypeFlow Learning</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <title>TypeFlow</title>
+  <meta name="theme-color" content="#f7f9ff">
+  <meta name="description" content="A calm space to learn typing and sentence building.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="TypeFlow">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="typeflow-icon.png">
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 12px;
+    }
+
+    .settings-button {
+      border: 1px solid #dce4f3;
+      border-radius: 12px;
+      background: #fff;
+      color: #17264b;
+      padding: 10px 14px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .settings-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(17, 28, 52, .42);
+      padding: 18px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-overlay.open {
+      display: flex;
+    }
+
+    .settings-panel {
+      width: min(100%, 420px);
+      max-height: 85dvh;
+      overflow-y: auto;
+      background: #fff;
+      color: #17264b;
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .18);
+    }
+
+    .settings-panel h2 {
+      margin-top: 0;
+    }
+
+    .settings-panel p {
+      line-height: 1.6;
+    }
+
+    .compatibility {
+      background: #f1f5ff;
+      border-radius: 14px;
+      padding: 14px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .install-steps {
+      padding-left: 22px;
+      line-height: 1.8;
+    }
+
+    .settings-close {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px;
+      background: #3478f6;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .settings-link {
+      color: #2467d8;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    @media (min-width: 700px) {
+      .mobile-notice {
+        display: block;
+      }
+    }
+
+    .mobile-notice {
+      display: none;
+      margin: 16px auto;
+      max-width: 520px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: #fff5dc;
+      color: #60450b;
+      text-align: center;
+      line-height: 1.5;
+    }
+  </style>
 </head>
+
 <body>
+  <div class="top-actions">
+    <button
+      class="settings-button"
+      type="button"
+      onclick="openSettings()"
+      aria-haspopup="dialog"
+      aria-controls="settingsOverlay"
+    >
+      ⚙️ Settings
+    </button>
+  </div>
+
+  <div class="mobile-notice" id="mobileNotice">
+    TypeFlow is currently designed for mobile devices and is compatible with iOS.
+    Please open it on an iPhone or iPad using Safari for the intended experience.
+  </div>
+
+  <!-- SETTINGS -->
+  <div
+    id="settingsOverlay"
+    class="settings-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="settingsTitle"
+    onclick="if(event.target === this) closeSettings()"
+  >
+    <section class="settings-panel">
+      <h2 id="settingsTitle">⚙️ Settings</h2>
+      <p>Make TypeFlow easier to open by adding it to your Home Screen.</p>
+
+      <div class="compatibility">
+        <strong>Compatibility</strong><br>
+        Currently compatible with iOS. Designed for mobile devices only.
+      </div>
+
+      <h3>Add TypeFlow to Home Screen</h3>
+      <ol class="install-steps">
+        <li>Open this website in <strong>Safari</strong> on your iPhone or iPad.</li>
+        <li>Tap Safari’s <strong>Share</strong> button.</li>
+        <li>Choose <strong>Add to Home Screen</strong>.</li>
+        <li>Keep the name as <strong>TypeFlow</strong>, then tap <strong>Add</strong>.</li>
+      </ol>
+
+      <p id="installStatus">
+        Once added, tap the TypeFlow icon on your Home Screen to open it like an app.
+      </p>
+
+      <button class="settings-close" type="button" onclick="closeSettings()">
+        Done
+      </button>
+    </section>
+  </div>
 
   <!-- AUTH SCREEN -->
   <div id="authScreen" class="screen active">
     <div class="auth-card">
-
       <h1>Welcome to TypeFlow</h1>
       <p class="subtitle">
         A calm space to learn typing and sentence building — designed for focus, learning, and practice.
@@ -28,26 +191,23 @@
         <button onclick="showTab('signup')">Sign Up</button>
       </div>
 
-      <!-- LOGIN -->
       <div id="loginTab" class="tab active">
         <h3>Login</h3>
-        <input id="loginUser" placeholder="Username">
-        <input id="loginPass" type="password" placeholder="Password">
+        <input id="loginUser" placeholder="Username" autocomplete="username">
+        <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
         <button onclick="login()">Login</button>
       </div>
 
-      <!-- SIGN UP -->
       <div id="signupTab" class="tab">
         <h3>Create Account</h3>
-        <input id="signupUser" placeholder="Username">
-        <input id="signupPass" type="password" placeholder="Password">
+        <input id="signupUser" placeholder="Username" autocomplete="username">
+        <input id="signupPass" type="password" placeholder="Password" autocomplete="new-password">
         <button onclick="signup()">Sign Up</button>
       </div>
 
       <p class="small-note">
         No email needed. Your progress is saved on this device only.
       </p>
-
     </div>
   </div>
 
@@ -74,7 +234,6 @@
         <p>Create your own practice sentences</p>
       </div>
 
-      <!-- VIDEOBUDDY CARD -->
       <div class="card" onclick="window.location.href='index2.html'" style="cursor:pointer;">
         <h3>🎬 VideoBuddy</h3>
         <p>Find and watch videos using your voice or search.</p>
@@ -88,7 +247,6 @@
       <button onclick="backHome()">← Back</button>
       <h2>Lessons</h2>
     </header>
-
     <div id="lessonGrid" class="grid"></div>
   </div>
 
@@ -102,7 +260,6 @@
     <div class="lesson-box">
       <p id="sentence"></p>
       <button onclick="speakSentence()">🔊 Read Sentence</button>
-
       <textarea id="typingInput" placeholder="Start typing here..."></textarea>
 
       <div class="stats">
@@ -125,7 +282,6 @@
     <div class="lesson-box">
       <div id="wordBank" class="word-bank"></div>
       <div id="answerArea" class="answer-area"></div>
-
       <button onclick="checkPuzzle()">Check Answer</button>
       <button onclick="nextPuzzle()">Next Puzzle</button>
     </div>
@@ -141,7 +297,6 @@
     <div class="editor">
       <input id="newLessonText" placeholder="Write a new sentence...">
       <button onclick="addLesson()">Add Lesson</button>
-
       <div id="customLessons"></div>
     </div>
   </div>
@@ -155,5 +310,41 @@
   </div>
 
   <script src="app.js"></script>
+
+  <script>
+    function openSettings() {
+      document.getElementById("settingsOverlay").classList.add("open");
+    }
+
+    function closeSettings() {
+      document.getElementById("settingsOverlay").classList.remove("open");
+    }
+
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Escape") closeSettings();
+    });
+
+    // Show the mobile compatibility notice on larger screens.
+    function updateDeviceNotice() {
+      const notice = document.getElementById("mobileNotice");
+      notice.style.display = window.matchMedia("(min-width: 700px)").matches
+        ? "block"
+        : "none";
+    }
+
+    updateDeviceNotice();
+    window.addEventListener("resize", updateDeviceNotice);
+
+    // Register the service worker when hosted on HTTPS or localhost.
+    if ("serviceWorker" in navigator &&
+        (location.protocol === "https:" || location.hostname === "localhost")) {
+      window.addEventListener("load", function() {
+        navigator.serviceWorker.register("./service-worker.js")
+          .catch(function(error) {
+            console.warn("TypeFlow offline setup could not start:", error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
