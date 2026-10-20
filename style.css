@@ -1213,3 +1213,46 @@ video {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =========================================================
+   TYPEFLOW — SCREEN NAVIGATION FIX
+   ========================================================= */
+
+/* Hide inactive screens */
+.screen {
+  display: none;
+}
+
+/* Show the selected screen */
+.screen.active {
+  display: block;
+}
+
+/* Center authentication and name setup screens */
+#authScreen.active,
+#nameScreen.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Center the completion screen */
+#finalScreen.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Keep screen backgrounds consistent */
+.screen {
+  background: var(--background);
+  min-height: 100vh;
+}
+
+/* Keep interactive elements clickable */
+.screen button,
+.screen input,
+.screen textarea,
+.screen select {
+  pointer-events: auto;
+}
