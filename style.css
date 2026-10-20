@@ -1,5 +1,7 @@
 
 /* =========================================================
+
+/* =========================================================
    TYPEFLOW — MODERN LIGHT DESIGN
    Clean, accessible, calm, and friendly
    ========================================================= */
@@ -145,6 +147,7 @@ svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 18px;
   padding: 18px 5%;
   background: rgba(255, 255, 255, 0.94);
@@ -166,16 +169,6 @@ main {
   width: 100%;
   min-height: 100vh;
   padding: 36px 5%;
-}
-
-#homeScreen,
-#typingScreen,
-#lessonScreen,
-#puzzleScreen,
-#editorScreen,
-#finalScreen,
-#nameScreen,
-#authScreen {
   background: var(--background);
 }
 
@@ -257,7 +250,7 @@ button:disabled {
 }
 
 button:not(:disabled):active {
-  transform: translateY(1px);
+  transform: translateY(0) scale(0.98);
 }
 
 .btn,
@@ -273,7 +266,7 @@ button[type="submit"] {
   min-height: 46px;
   padding: 11px 20px;
   border: 1px solid transparent;
-  border-radius: 13px;
+  border-radius: 15px;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
@@ -285,8 +278,8 @@ button[type="submit"] {
 button.primary,
 button[type="submit"] {
   color: #fff;
-  background: var(--primary);
-  box-shadow: 0 4px 12px rgba(71, 121, 245, 0.16);
+  background: linear-gradient(135deg, #5485ff, #4779f5);
+  box-shadow: 0 5px 14px rgba(71, 121, 245, 0.22);
 }
 
 .btn-primary:hover,
@@ -294,8 +287,9 @@ button[type="submit"] {
 button.primary:hover,
 button[type="submit"]:hover {
   color: #fff;
-  background: var(--primary-hover);
-  box-shadow: 0 6px 18px rgba(71, 121, 245, 0.22);
+  background: linear-gradient(135deg, #4779f5, #3566e5);
+  box-shadow: 0 8px 20px rgba(71, 121, 245, 0.28);
+  transform: translateY(-2px);
 }
 
 .btn-secondary,
@@ -304,6 +298,7 @@ button.secondary {
   color: var(--text);
   background: #fff;
   border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary:hover,
@@ -311,6 +306,7 @@ button.secondary {
 button.secondary:hover {
   background: var(--primary-soft);
   border-color: #c9d8ff;
+  transform: translateY(-2px);
 }
 
 .back-button {
@@ -332,6 +328,12 @@ button.danger,
   border-color: transparent;
 }
 
+button.danger:hover,
+.btn-danger:hover {
+  background: #ffe2e5;
+  transform: translateY(-2px);
+}
+
 /* -------------------------
    INPUTS AND FORMS
    ------------------------- */
@@ -345,7 +347,7 @@ select {
   color: var(--text);
   background: #fff;
   border: 1px solid var(--border-strong);
-  border-radius: 12px;
+  border-radius: 13px;
   outline: none;
   transition:
     border-color var(--transition),
@@ -413,7 +415,7 @@ form input + input {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 36px 20px;
+  padding: 24px 20px;
 }
 
 #authScreen::before,
@@ -486,7 +488,8 @@ form input + input {
   color: var(--text-secondary);
   background: transparent;
   border: 0;
-  border-radius: 10px;
+  border-radius: 11px;
+  box-shadow: none;
 }
 
 .auth-tabs button.active,
@@ -836,7 +839,7 @@ form input + input {
   color: #34486e;
   background: #fff;
   border: 1px solid #dce5f7;
-  border-radius: 12px;
+  border-radius: 13px;
   box-shadow: var(--shadow-sm);
   font-weight: 650;
   cursor: pointer;
@@ -1215,44 +1218,86 @@ video {
 }
 
 /* =========================================================
-   TYPEFLOW — SCREEN NAVIGATION FIX
+   SCREEN NAVIGATION
+   IMPORTANT: Keep this section at the bottom.
    ========================================================= */
 
-/* Hide inactive screens */
-.screen {
-  display: none;
+/* Hide all inactive app screens */
+.screen:not(.active),
+#authScreen.screen:not(.active),
+#nameScreen.screen:not(.active),
+#finalScreen.screen:not(.active) {
+  display: none !important;
 }
 
-/* Show the selected screen */
+/* Default layout for the active screen */
 .screen.active {
   display: block;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--background);
 }
 
-/* Center authentication and name setup screens */
-#authScreen.active,
-#nameScreen.active {
+/* Center the sign-in and account-name screens */
+#authScreen.screen.active,
+#nameScreen.screen.active {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
+  padding: 24px 20px;
 }
 
 /* Center the completion screen */
-#finalScreen.active {
+#finalScreen.screen.active {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Keep screen backgrounds consistent */
-.screen {
-  background: var(--background);
-  min-height: 100vh;
+/* Keep inactive screens hidden even if other CSS sets display */
+.screen:not(.active) {
+  visibility: hidden;
+  pointer-events: none;
 }
 
-/* Keep interactive elements clickable */
-.screen button,
-.screen input,
-.screen textarea,
-.screen select {
+/* Keep active screen controls interactive */
+.screen.active button,
+.screen.active input,
+.screen.active textarea,
+.screen.active select {
   pointer-events: auto;
+}
+
+/* Rounded buttons with subtle movement */
+button,
+.btn,
+.button,
+.primary-button,
+.secondary-button,
+.back-button {
+  border-radius: 15px;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-2px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+}
+
+button:disabled {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .btn,
+  .button,
+  .primary-button,
+  .secondary-button,
+  .back-button {
+    transition: none !important;
+  }
 }
