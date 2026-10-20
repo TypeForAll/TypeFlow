@@ -3,138 +3,560 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f7ff">
+  <meta name="description" content="TypeFlow helps learners practice typing and build confidence at their own pace.">
   <title>TypeFlow</title>
-  <meta name="theme-color" content="#f7f9ff">
-  <meta name="description" content="A calm space to learn typing and sentence building.">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="TypeFlow">
 
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="typeflow-icon.png" type="image/png">
   <link rel="apple-touch-icon" href="typeflow-icon.png">
   <link rel="stylesheet" href="style.css">
 
   <style>
-    .top-actions {
-      display: flex;
-      justify-content: flex-end;
-      padding: 12px;
+    :root {
+      --tf-bg: #f4f7ff;
+      --tf-card: #ffffff;
+      --tf-text: #17264b;
+      --tf-muted: #65718c;
+      --tf-primary: #4169e1;
+      --tf-border: #dce4f3;
+      --tf-danger: #b42318;
     }
 
-    .settings-button {
-      border: 1px solid #dce4f3;
-      border-radius: 12px;
-      background: #fff;
-      color: #17264b;
-      padding: 10px 14px;
-      font-size: 15px;
-      cursor: pointer;
+    body {
+      background: var(--tf-bg);
+      color: var(--tf-text);
     }
 
-    .settings-overlay {
+    .screen {
       display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: rgba(17, 28, 52, .42);
-      padding: 18px;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    #authScreen.active,
+    #nameScreen.active {
+      display: flex;
       align-items: center;
       justify-content: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      box-sizing: border-box;
     }
 
-    .settings-overlay.open {
-      display: flex;
-    }
-
-    .settings-panel {
-      width: min(100%, 420px);
-      max-height: 85dvh;
-      overflow-y: auto;
-      background: #fff;
-      color: #17264b;
-      border-radius: 22px;
-      padding: 24px;
-      box-shadow: 0 18px 60px rgba(0, 0, 0, .18);
-    }
-
-    .settings-panel h2 {
-      margin-top: 0;
-    }
-
-    .settings-panel p {
-      line-height: 1.6;
-    }
-
-    .compatibility {
-      background: #f1f5ff;
-      border-radius: 14px;
-      padding: 14px;
-      margin: 16px 0;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    .install-steps {
-      padding-left: 22px;
-      line-height: 1.8;
-    }
-
-    .settings-close {
+    .auth-card {
       width: 100%;
-      border: 0;
+      max-width: 440px;
+      margin: auto;
+      padding: 28px;
+      border: 1px solid var(--tf-border);
+      border-radius: 22px;
+      background: var(--tf-card);
+      box-shadow: 0 12px 36px rgba(30, 55, 100, 0.08);
+      box-sizing: border-box;
+    }
+
+    .auth-card h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .auth-card .subtitle {
+      color: var(--tf-muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .info-box {
+      padding: 12px 14px;
+      margin: 18px 0;
       border-radius: 12px;
-      padding: 12px;
-      background: #3478f6;
+      background: #eef3ff;
+      line-height: 1.5;
+    }
+
+    .info-box p {
+      margin: 0;
+    }
+
+    .auth-card input {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 13px 14px;
+      border: 1px solid var(--tf-border);
+      border-radius: 11px;
+      background: white;
+      color: var(--tf-text);
+      font: inherit;
+      box-sizing: border-box;
+    }
+
+    .auth-card button {
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .auth-card .primary-auth-button,
+    #loginTab > button,
+    #signupTab > button,
+    #nameScreen .auth-card > button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 13px 16px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--tf-primary);
       color: white;
+      font-weight: 600;
+    }
+
+    #googleSignIn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 16px;
+      margin: 16px 0;
+      border: 1px solid var(--tf-border);
+      border-radius: 11px;
+      background: white;
+      color: #27334b;
       font-size: 16px;
+      font-weight: 600;
+    }
+
+    #googleSignIn:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .google-logo {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0;
+      color: var(--tf-muted);
+      font-size: 13px;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: var(--tf-border);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .tabs button {
+      flex: 1;
+      padding: 11px;
+      border: 1px solid var(--tf-border);
+      border-radius: 10px;
+      background: #f7f9ff;
+      color: var(--tf-text);
+    }
+
+    .tabs button.active {
+      border-color: var(--tf-primary);
+      background: #eaf0ff;
+      color: var(--tf-primary);
+      font-weight: 700;
+    }
+
+    .tab {
+      display: none;
+    }
+
+    .tab.active {
+      display: block;
+    }
+
+    .small-note {
+      margin-top: 18px;
+      color: var(--tf-muted);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .message {
+      margin-top: 14px;
+      color: #176b3a;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .message.error {
+      color: var(--tf-danger);
+    }
+
+    #cloudStatus {
+      margin: 12px 0;
+      text-align: center;
+    }
+
+    .progress-wrap {
+      margin: 16px 0;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 7px;
+      font-size: 13px;
+    }
+
+    .progress-track {
+      height: 9px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #e4eaf7;
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--tf-primary);
+      transition: width 0.15s ease;
+    }
+
+    .editor-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .editor-row input {
+      flex: 1 1 180px;
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--tf-border);
+      border-radius: 9px;
+      font: inherit;
+    }
+
+    .editor-row button {
+      padding: 9px 12px;
+    }
+
+    .editor-row .delete {
+      color: #a51d2d;
+    }
+
+    .lesson-card {
       cursor: pointer;
     }
 
-    .settings-link {
-      color: #2467d8;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-
-    @media (min-width: 700px) {
-      .mobile-notice {
-        display: block;
-      }
+    .lesson-card.locked {
+      cursor: not-allowed;
     }
 
     .mobile-notice {
       display: none;
-      margin: 16px auto;
-      max-width: 520px;
-      padding: 12px 16px;
+      margin: 12px;
+      padding: 12px;
       border-radius: 12px;
-      background: #fff5dc;
-      color: #60450b;
-      text-align: center;
-      line-height: 1.5;
+      background: #fff5d9;
+      color: #654d00;
+      font-size: 13px;
+    }
+
+    @media (max-width: 520px) {
+      .auth-card {
+        padding: 22px 18px;
+      }
     }
   </style>
 </head>
 
 <body>
-  <div class="top-actions">
-    <button
-      class="settings-button"
-      type="button"
-      onclick="openSettings()"
-      aria-haspopup="dialog"
-      aria-controls="settingsOverlay"
-    >
-      ⚙️ Settings
-    </button>
-  </div>
+  <!-- AUTHENTICATION -->
+  <section id="authScreen" class="screen active">
+    <div class="auth-card">
+      <h1>Welcome to TypeFlow</h1>
+      <p class="subtitle">
+        Learn typing and build confidence one small step at a time.
+      </p>
 
-  <div class="mobile-notice" id="mobileNotice">
-    TypeFlow is currently designed for mobile devices and is compatible with iOS.
-    Please open it on an iPhone or iPad using Safari for the intended experience.
-  </div>
+      <div class="info-box">
+        <p>
+          Practice typing, reading, and building sentences at your own pace.
+          Sign in to keep your learning progress connected to your account.
+        </p>
+      </div>
+
+      <button id="googleSignIn" type="button" onclick="googleLogin()">
+        <svg class="google-logo" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" transform="translate(0 4)"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.72 7.18l7.65 5.93c4.46-4.12 7.11-10.19 7.11-17.58z"/>
+          <path fill="#FBBC05" d="M10.53 28.59a14.4 14.4 0 0 1 0-9.18l-7.98-6.19a23.94 23.94 0 0 0 0 21.56l7.98-6.19z" transform="translate(0 4)"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.9-5.8l-7.65-5.93c-2.13 1.43-4.85 2.28-8.25 2.28-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="auth-divider">or continue with email</div>
+
+      <div class="tabs">
+        <button type="button" class="active" onclick="showTab('login')">
+          Login
+        </button>
+        <button type="button" onclick="showTab('signup')">
+          Sign Up
+        </button>
+      </div>
+
+      <div id="loginTab" class="tab active">
+        <h3>Welcome back</h3>
+
+        <form id="loginForm">
+          <input
+            id="loginEmail"
+            type="email"
+            placeholder="Email address"
+            autocomplete="email"
+            required
+          >
+
+          <input
+            id="loginPass"
+            type="password"
+            placeholder="Password"
+            autocomplete="current-password"
+            required
+          >
+
+          <button type="submit">Login</button>
+        </form>
+      </div>
+
+      <div id="signupTab" class="tab">
+        <h3>Create your account</h3>
+
+        <form id="signupForm">
+          <input
+            id="signupEmail"
+            type="email"
+            placeholder="Email address"
+            autocomplete="email"
+            required
+          >
+
+          <input
+            id="signupPass"
+            type="password"
+            placeholder="Password (at least 6 characters)"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          >
+
+          <button type="submit">Create Account</button>
+        </form>
+      </div>
+
+      <p class="small-note">
+        Your password is managed securely by Firebase Authentication.
+        Your learning progress is saved to your account.
+      </p>
+
+      <p id="authMessage" class="message" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- FIRST-TIME DISPLAY NAME -->
+  <section id="nameScreen" class="screen">
+    <div class="auth-card">
+      <h1>What should we call you?</h1>
+      <p class="subtitle">
+        Choose the name TypeFlow will use to greet you.
+      </p>
+
+      <form id="displayNameForm">
+        <input
+          id="displayNameInput"
+          type="text"
+          maxlength="40"
+          placeholder="Your display name"
+          autocomplete="nickname"
+          required
+        >
+        <button type="submit">Continue</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- HOME -->
+  <main id="homeScreen" class="screen">
+    <header class="app-header">
+      <h1 id="greeting">Hello</h1>
+
+      <div class="header-actions">
+        <button type="button" onclick="openSettings()">Settings</button>
+        <button type="button" class="secondary" onclick="logout()">Log Out</button>
+      </div>
+    </header>
+
+    <p id="cloudStatus" class="message" role="status" aria-live="polite"></p>
+
+    <div class="mobile-notice" id="mobileNotice">
+      TypeFlow works best in a modern browser. Keep your browser updated.
+    </div>
+
+    <section class="home-grid">
+      <article class="home-card">
+        <h2>Typing Mode</h2>
+        <p>Practice typing each sentence at your own pace.</p>
+        <button type="button" onclick="openTyping()">Start Typing</button>
+      </article>
+
+      <article class="home-card">
+        <h2>Sentence Puzzles</h2>
+        <p>Put words in the correct order to build each sentence.</p>
+        <button type="button" onclick="openPuzzle()">Play Puzzles</button>
+      </article>
+
+      <article class="home-card">
+        <h2>Lesson Editor</h2>
+        <p>Create and manage your own typing lessons.</p>
+        <button type="button" onclick="openEditor()">Edit Lessons</button>
+      </article>
+
+      <article class="home-card">
+        <h2>VideoBuddy</h2>
+        <p>Open the VideoBuddy learning area.</p>
+        <button type="button" onclick="openVideoBuddy()">Open VideoBuddy</button>
+      </article>
+    </section>
+  </main>
+
+  <!-- LESSON MENU -->
+  <section id="lessonScreen" class="screen">
+    <header class="page-header">
+      <button type="button" class="secondary" onclick="backHome()">← Home</button>
+      <h2>Typing Lessons</h2>
+    </header>
+
+    <div id="lessonGrid" class="lesson-grid"></div>
+  </section>
+
+  <!-- TYPING -->
+  <section id="typingScreen" class="screen">
+    <header class="page-header">
+      <button type="button" class="secondary" onclick="backLessons()">← Lessons</button>
+      <h2>Typing Practice</h2>
+    </header>
+
+    <div class="lesson-box">
+      <p id="sentence" class="sentence"></p>
+
+      <textarea
+        id="typingInput"
+        rows="4"
+        placeholder="Start typing the sentence here..."
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        aria-label="Type the lesson sentence"
+      ></textarea>
+
+      <div class="typing-stats">
+        <span id="wpm">WPM: 0</span>
+        <span id="accuracy">Accuracy: 100%</span>
+      </div>
+
+      <div class="typing-actions">
+        <button type="button" onclick="speakSentence()">Read Sentence</button>
+        <button type="button" onclick="checkTyping()">Check Answer</button>
+        <button type="button" class="secondary" onclick="backLessons()">Back to Lessons</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SENTENCE PUZZLE -->
+  <section id="puzzleScreen" class="screen">
+    <header class="page-header">
+      <button type="button" class="secondary" onclick="backLessons()">← Lessons</button>
+      <h2>Sentence Puzzle</h2>
+    </header>
+
+    <div class="lesson-box">
+      <p>Click the words in the correct order to build the sentence.</p>
+
+      <h3>Word Bank</h3>
+      <div id="wordBank" class="word-bank"></div>
+
+      <h3>Your Sentence</h3>
+      <div id="answerArea" class="answer-area"></div>
+
+      <div class="typing-actions">
+        <button type="button" onclick="checkPuzzle()">Check Sentence</button>
+        <button type="button" class="secondary" onclick="speakSentence()">Read Original Sentence</button>
+        <button type="button" class="secondary" onclick="backLessons()">Back to Lessons</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CUSTOM LESSON EDITOR -->
+  <section id="editorScreen" class="screen">
+    <header class="page-header">
+      <button type="button" class="secondary" onclick="backHome()">← Home</button>
+      <h2>Lesson Editor</h2>
+    </header>
+
+    <div class="lesson-box">
+      <p>Create your own sentence for typing practice.</p>
+
+      <form id="addLessonForm">
+        <input
+          id="newLessonText"
+          type="text"
+          maxlength="300"
+          placeholder="Type a new lesson sentence..."
+          aria-label="New custom lesson"
+          required
+        >
+        <button type="submit">Add Lesson</button>
+      </form>
+
+      <h3>Your Custom Lessons</h3>
+      <div id="customLessons"></div>
+    </div>
+  </section>
+
+  <!-- COMPLETION -->
+  <section id="finalScreen" class="screen">
+    <div class="final-card">
+      <h1>Good Job!</h1>
+      <div class="stars" aria-label="Three completion stars">★ ★ ★</div>
+      <p>You completed this lesson.</p>
+      <div class="final-actions">
+        <button type="button" onclick="backHome()">Main Menu</button>
+      </div>
+    </div>
+  </section>
 
   <!-- SETTINGS -->
   <div
@@ -143,208 +565,156 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="settingsTitle"
-    onclick="if(event.target === this) closeSettings()"
+    hidden
   >
-    <section class="settings-panel">
-      <h2 id="settingsTitle">⚙️ Settings</h2>
-      <p>Make TypeFlow easier to open by adding it to your Home Screen.</p>
+    <div class="settings-card">
+      <button type="button" class="secondary" onclick="closeSettings()">Close</button>
+      <h2 id="settingsTitle">Settings</h2>
 
-      <div class="compatibility">
-        <strong>Compatibility</strong><br>
-        Currently compatible with iOS. Designed for mobile devices only.
-      </div>
+      <label for="speakWordsSetting">
+        <input id="speakWordsSetting" type="checkbox" checked>
+        Read words aloud while typing
+      </label>
 
-      <h3>Add TypeFlow to Home Screen</h3>
-      <ol class="install-steps">
-        <li>Open this website in <strong>Safari</strong> on your iPhone or iPad.</li>
-        <li>Tap Safari’s <strong>Share</strong> button.</li>
-        <li>Choose <strong>Add to Home Screen</strong>.</li>
-        <li>Keep the name as <strong>TypeFlow</strong>, then tap <strong>Add</strong>.</li>
-      </ol>
-
-      <p id="installStatus">
-        Once added, tap the TypeFlow icon on your Home Screen to open it like an app.
-      </p>
-
-      <button class="settings-close" type="button" onclick="closeSettings()">
-        Done
-      </button>
-    </section>
-  </div>
-
-  <!-- AUTH SCREEN -->
-  <div id="authScreen" class="screen active">
-    <div class="auth-card">
-      <h1>Welcome to TypeFlow</h1>
-      <p class="subtitle">
-        A calm space to learn typing and sentence building — designed for focus, learning, and practice.
-      </p>
-
-      <div class="info-box">
-        <p>
-          Built for learners who benefit from a slower, structured experience while typing, reading, and forming sentences.
-        </p>
-      </div>
-
-      <div class="tabs">
-        <button onclick="showTab('login')">Login</button>
-        <button onclick="showTab('signup')">Sign Up</button>
-      </div>
-
-      <div id="loginTab" class="tab active">
-        <h3>Login</h3>
-        <input id="loginUser" placeholder="Username" autocomplete="username">
-        <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
-        <button onclick="login()">Login</button>
-      </div>
-
-      <div id="signupTab" class="tab">
-        <h3>Create Account</h3>
-        <input id="signupUser" placeholder="Username" autocomplete="username">
-        <input id="signupPass" type="password" placeholder="Password" autocomplete="new-password">
-        <button onclick="signup()">Sign Up</button>
-      </div>
-
-      <p class="small-note">
-        No email needed. Your progress is saved on this device only.
-      </p>
+      <label for="voiceRateSetting">
+        Speech speed
+        <input
+          id="voiceRateSetting"
+          type="range"
+          min="0.5"
+          max="2"
+          step="0.1"
+          value="0.9"
+        >
+        <span id="voiceRateValue">0.9×</span>
+      </label>
     </div>
   </div>
 
-  <!-- HOME SCREEN -->
-  <div id="homeScreen" class="screen">
-    <header>
-      <h2 id="greeting">Hello</h2>
-      <button onclick="logout()" class="logout">Log Out</button>
-    </header>
+  <!-- FIREBASE COMPAT LIBRARIES -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
-    <div class="menu">
-      <div class="card" onclick="openTyping()">
-        <h3>Typing Mode</h3>
-        <p>Practice real lessons</p>
-      </div>
-
-      <div class="card" onclick="openPuzzle()">
-        <h3>Sentence Puzzles</h3>
-        <p>Build sentences step by step</p>
-      </div>
-
-      <div class="card" onclick="openEditor()">
-        <h3>Lesson Editor</h3>
-        <p>Create your own practice sentences</p>
-      </div>
-
-      <div class="card" onclick="window.location.href='index2.html'" style="cursor:pointer;">
-        <h3>🎬 VideoBuddy</h3>
-        <p>Find and watch videos using your voice or search.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- LESSON MENU -->
-  <div id="lessonScreen" class="screen">
-    <header>
-      <button onclick="backHome()">← Back</button>
-      <h2>Lessons</h2>
-    </header>
-    <div id="lessonGrid" class="grid"></div>
-  </div>
-
-  <!-- TYPING MODE -->
-  <div id="typingScreen" class="screen">
-    <header>
-      <button onclick="backLessons()">← Back</button>
-      <h2>Typing Mode</h2>
-    </header>
-
-    <div class="lesson-box">
-      <p id="sentence"></p>
-      <button onclick="speakSentence()">🔊 Read Sentence</button>
-      <textarea id="typingInput" placeholder="Start typing here..."></textarea>
-
-      <div class="stats">
-        <span id="wpm">WPM: 0</span>
-        <span id="accuracy">Accuracy: 100%</span>
-      </div>
-
-      <button onclick="checkTyping()">Check Answer</button>
-      <button onclick="nextLesson()">Next Lesson</button>
-    </div>
-  </div>
-
-  <!-- PUZZLE MODE -->
-  <div id="puzzleScreen" class="screen">
-    <header>
-      <button onclick="backHome()">← Back</button>
-      <h2>Sentence Puzzle</h2>
-    </header>
-
-    <div class="lesson-box">
-      <div id="wordBank" class="word-bank"></div>
-      <div id="answerArea" class="answer-area"></div>
-      <button onclick="checkPuzzle()">Check Answer</button>
-      <button onclick="nextPuzzle()">Next Puzzle</button>
-    </div>
-  </div>
-
-  <!-- EDITOR -->
-  <div id="editorScreen" class="screen">
-    <header>
-      <button onclick="backHome()">← Back</button>
-      <h2>Lesson Editor</h2>
-    </header>
-
-    <div class="editor">
-      <input id="newLessonText" placeholder="Write a new sentence...">
-      <button onclick="addLesson()">Add Lesson</button>
-      <div id="customLessons"></div>
-    </div>
-  </div>
-
-  <!-- FINAL SCREEN -->
-  <div id="finalScreen" class="screen">
-    <div class="final-card">
-      <h1>Good Job 🎉</h1>
-      <button onclick="backHome()">Main Menu</button>
-    </div>
-  </div>
-
+  <!-- TYPEFLOW APP -->
   <script src="app.js"></script>
 
+  <!-- SETTINGS, VIDEO BUDDY, AND PWA -->
   <script>
     function openSettings() {
-      document.getElementById("settingsOverlay").classList.add("open");
+      var overlay = document.getElementById("settingsOverlay");
+      if (!overlay) return;
+
+      overlay.hidden = false;
+
+      if (typeof firebase !== "undefined" && firebase.auth().currentUser) {
+        var uid = firebase.auth().currentUser.uid;
+
+        firebase.firestore().collection("users").doc(uid).get()
+          .then(function (snapshot) {
+            var data = snapshot.exists ? snapshot.data() : {};
+            var settings = data.settings || {};
+
+            var speak = document.getElementById("speakWordsSetting");
+            var rate = document.getElementById("voiceRateSetting");
+            var rateValue = document.getElementById("voiceRateValue");
+
+            if (speak && typeof settings.speakWords === "boolean") {
+              speak.checked = settings.speakWords;
+            }
+
+            if (rate && typeof settings.voiceRate === "number") {
+              rate.value = settings.voiceRate;
+              if (rateValue) rateValue.textContent = settings.voiceRate.toFixed(1) + "×";
+            }
+          })
+          .catch(function (error) {
+            console.error("Could not load settings:", error);
+          });
+      }
     }
 
     function closeSettings() {
-      document.getElementById("settingsOverlay").classList.remove("open");
+      var overlay = document.getElementById("settingsOverlay");
+      if (overlay) overlay.hidden = true;
     }
 
-    document.addEventListener("keydown", function(event) {
-      if (event.key === "Escape") closeSettings();
-    });
-
-    // Show the mobile compatibility notice on larger screens.
-    function updateDeviceNotice() {
-      const notice = document.getElementById("mobileNotice");
-      notice.style.display = window.matchMedia("(min-width: 700px)").matches
-        ? "block"
-        : "none";
+    function openVideoBuddy() {
+      window.location.href = "index2.html";
     }
 
-    updateDeviceNotice();
-    window.addEventListener("resize", updateDeviceNotice);
+    document.addEventListener("DOMContentLoaded", function () {
+      var loginForm = document.getElementById("loginForm");
+      var signupForm = document.getElementById("signupForm");
+      var nameForm = document.getElementById("displayNameForm");
+      var addLessonForm = document.getElementById("addLessonForm");
 
-    // Register the service worker when hosted on HTTPS or localhost.
-    if ("serviceWorker" in navigator &&
-        (location.protocol === "https:" || location.hostname === "localhost")) {
-      window.addEventListener("load", function() {
-        navigator.serviceWorker.register("./service-worker.js")
-          .catch(function(error) {
-            console.warn("TypeFlow offline setup could not start:", error);
+      if (loginForm) {
+        loginForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          if (typeof window.login === "function") window.login();
+        });
+      }
+
+      if (signupForm) {
+        signupForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          if (typeof window.signup === "function") window.signup();
+        });
+      }
+
+      if (nameForm) {
+        nameForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          if (typeof window.saveDisplayName === "function") {
+            window.saveDisplayName();
+          }
+        });
+      }
+
+      if (addLessonForm) {
+        addLessonForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          if (typeof window.addLesson === "function") window.addLesson();
+        });
+      }
+
+      var speak = document.getElementById("speakWordsSetting");
+      var rate = document.getElementById("voiceRateSetting");
+      var rateValue = document.getElementById("voiceRateValue");
+
+      if (speak) {
+        speak.addEventListener("change", function () {
+          if (typeof window.setSpeakWords === "function") {
+            window.setSpeakWords(speak.checked);
+          }
+        });
+      }
+
+      if (rate) {
+        rate.addEventListener("input", function () {
+          if (rateValue) rateValue.textContent = Number(rate.value).toFixed(1) + "×";
+          if (typeof window.setVoiceRate === "function") {
+            window.setVoiceRate(rate.value);
+          }
+        });
+      }
+
+      var overlay = document.getElementById("settingsOverlay");
+
+      if (overlay) {
+        overlay.addEventListener("click", function (event) {
+          if (event.target === overlay) closeSettings();
+        });
+      }
+
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        navigator.serviceWorker.register("service-worker.js")
+          .catch(function (error) {
+            console.warn("Service worker registration failed:", error);
           });
-      });
-    }
+      }
+    });
   </script>
 </body>
 </html>
