@@ -2,10 +2,7 @@
 (function () {
   "use strict";
 
-  // =========================================================
-  // TYPEFLOW - FIREBASE AUTHENTICATION + CLOUD PROGRESS
-  // =========================================================
-
+  // TypeFlow: Firebase-backed accounts and a temporary demo account.
   var firebaseConfig = {
     apiKey: "AIzaSyBmV96qc0v1aO3KFRrIQ19kJJms9Usz_Jc",
     authDomain: "typeflow-f2e2e.firebaseapp.com",
@@ -16,14 +13,16 @@
     measurementId: "G-KX3HNBNCX1"
   };
 
+  var DEMO_USER = "TEST-e232";
+  var DEMO_PASS = "14334";
+  var DEMO_UID = "typeflow-demo";
+
   if (!window.firebase) {
-    console.error("Firebase scripts are missing. Update index.html first.");
+    console.error("Firebase scripts are missing from index.html.");
     return;
   }
 
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
   var auth = firebase.auth();
   var db = firebase.firestore();
@@ -47,11 +46,23 @@
     puzzleAnswer: [],
     puzzleShuffled: [],
     authReady: false,
-    authBusy: false
+    authBusy: false,
+    demo: false
   };
+
+  var demoAccount = null;
+  var saveTimer = null;
 
   function byId(id) {
     return document.getElementById(id);
+  }
+
+  function firstId() {
+    for (var i = 0; i < arguments.length; i++) {
+      var element = byId(arguments[i]);
+      if (element) return element;
+    }
+    return null;
   }
 
   function currentAccount() {
@@ -60,11 +71,19 @@
       : null;
   }
 
-  function createAccount(user, displayName) {
+  function isDemo() {
+    return !!(
+      state.demo &&
+      state.currentUser &&
+      state.currentUser.uid === DEMO_UID
+    );
+  }
+
+  function createAccount(user, name) {
     return {
       uid: user.uid,
       email: user.email || "",
-      username: displayName || user.displayName || "",
+      username: name || user.displayName || "",
       customLessons: [],
       completedLessons: [],
       unlockedLessons: [0],
@@ -76,9 +95,11 @@
   }
 
   function normalizeAccount(user, data) {
+    data = data || {};
+
     var account = createAccount(
       user,
-      data.displayName || user.displayName || ""
+      data.displayName || data.username || user.displayName || ""
     );
 
     account.customLessons = Array.isArray(data.customLessons)
@@ -100,43 +121,62 @@
     }
 
     account.settings = Object.assign(
+      {},
       account.settings,
       data.settings || {}
     );
 
-    if (typeof account.settings.voiceRate !== "number") {
-      account.settings.voiceRate = 0.9;
-    }
+    account.settings.speakWords =
+      account.settings.speakWords !== false;
+
+    var rate = Number(account.settings.voiceRate);
+
+    account.settings.voiceRate = Number.isFinite(rate)
+      ? Math.max(0.5, Math.min(2, rate))
+      : 0.9;
 
     return account;
   }
 
-  // ---------------------------------------------------------
-  // CLOUD SAVING
-  // ---------------------------------------------------------
+  function showCloudMessage(message, error) {
+    var element = byId("cloudStatus");
 
-  var saveTimer = null;
+    if (!element) {
+      element = document.createElement("p");
+      element.id = "cloudStatus";
+      element.className = "message";
+
+      var home = byId("homeScreen");
+      if (!home) return;
+
+      home.appendChild(element);
+    }
+
+    element.textContent = message;
+    element.classList.toggle("error", !!error);
+  }
 
   function saveAccounts() {
     var user = state.currentUser;
     var account = currentAccount();
 
-    if (!user || !account) {
+    if (!user || !account || isDemo()) {
       return Promise.resolve();
     }
 
-    var data = {
-      displayName: account.username || "",
-      email: user.email || "",
-      customLessons: account.customLessons,
-      completedLessons: account.completedLessons,
-      unlockedLessons: account.unlockedLessons,
-      settings: account.settings,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    return db.collection("users").doc(user.uid).set(data, {
-      merge: true
+    return db.collection("users").doc(user.uid).set(
+      {
+        displayName: account.username || "",
+        email: user.email || "",
+        customLessons: account.customLessons,
+        completedLessons: account.completedLessons,
+        unlockedLessons: account.unlockedLessons,
+        settings: account.settings,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    ).then(function () {
+      showCloudMessage("Progress saved to your account.", false);
     }).catch(function (error) {
       console.error("TypeFlow cloud save failed:", error);
       showCloudMessage(
@@ -147,51 +187,28 @@
   }
 
   function scheduleSave() {
-    if (saveTimer) {
-      clearTimeout(saveTimer);
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = null;
+
+    if (!isDemo()) {
+      saveTimer = setTimeout(function () {
+        saveTimer = null;
+        saveAccounts();
+      }, 350);
     }
-
-    saveTimer = setTimeout(function () {
-      saveAccounts();
-    }, 350);
-  }
-
-  function showCloudMessage(message, isError) {
-    var target = byId("cloudStatus");
-
-    if (!target) {
-      target = document.createElement("p");
-      target.id = "cloudStatus";
-      target.className = "message";
-
-      var home = byId("homeScreen");
-      if (home) {
-        home.appendChild(target);
-      } else {
-        return;
-      }
-    }
-
-    target.textContent = message;
-    target.classList.toggle("error", Boolean(isError));
   }
 
   async function loadUserData(user) {
     state.currentUser = user;
+    state.demo = false;
 
     var snapshot = await db.collection("users").doc(user.uid).get();
 
-    if (snapshot.exists) {
-      state.accounts[user.uid] = normalizeAccount(
-        user,
-        snapshot.data()
-      );
-    } else {
-      state.accounts[user.uid] = createAccount(
-        user,
-        user.displayName || ""
-      );
-    }
+    state.accounts[user.uid] = snapshot.exists
+      ? normalizeAccount(user, snapshot.data())
+      : createAccount(user, user.displayName || "");
+
+    bindSettingsControls();
 
     var account = currentAccount();
 
@@ -200,16 +217,12 @@
       return;
     }
 
-    // Ensure the document exists for newly created Google accounts.
     await saveAccounts();
-
     updateGreeting();
+    renderLessonMenu();
+    renderEditor();
     showScreen("homeScreen");
   }
-
-  // ---------------------------------------------------------
-  // SCREENS AND MESSAGES
-  // ---------------------------------------------------------
 
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach(function (screen) {
@@ -217,24 +230,24 @@
     });
   }
 
-  function setMessage(text, isError) {
-    var authScreen = byId("authScreen");
-    if (!authScreen) return;
+  function setMessage(message, error) {
+    var screen = byId("authScreen");
+    if (!screen) return;
 
-    var card = authScreen.querySelector(".auth-card");
+    var card = screen.querySelector(".auth-card");
     if (!card) return;
 
-    var message = byId("authMessage");
+    var element = byId("authMessage");
 
-    if (!message) {
-      message = document.createElement("p");
-      message.id = "authMessage";
-      message.className = "message";
-      card.appendChild(message);
+    if (!element) {
+      element = document.createElement("p");
+      element.id = "authMessage";
+      element.className = "message";
+      card.appendChild(element);
     }
 
-    message.textContent = text;
-    message.classList.toggle("error", Boolean(isError));
+    element.textContent = message;
+    element.classList.toggle("error", !!error);
   }
 
   function clearMessage() {
@@ -257,8 +270,9 @@
       "permission-denied": "Firestore blocked access. Check your database rules."
     };
 
-    return messages[error.code] ||
-      "Something went wrong: " + (error.message || "Please try again.");
+    return messages[error && error.code] ||
+      "Something went wrong: " +
+      ((error && error.message) || "Please try again.");
   }
 
   function updateGreeting() {
@@ -267,7 +281,7 @@
 
     if (greeting) {
       greeting.textContent = account
-        ? "Hello, " + account.username
+        ? "Hello, " + (account.username || "there")
         : "Hello";
     }
   }
@@ -278,7 +292,7 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(/'/g, "&#39;");
   }
 
   function normalizeText(value) {
@@ -300,68 +314,98 @@
     if (!("speechSynthesis" in window) || !text) return;
 
     var account = currentAccount();
-    var utterance = new SpeechSynthesisUtterance(text);
 
-    utterance.rate =
-      account && account.settings
-        ? account.settings.voiceRate
-        : 0.9;
+    if (account && account.settings.speakWords === false) return;
+
+    var utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = account && account.settings
+      ? account.settings.voiceRate
+      : 0.9;
 
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   }
 
-  // ---------------------------------------------------------
-  // AUTHENTICATION
-  // ---------------------------------------------------------
+  function enterDemo() {
+    if (!demoAccount) {
+      demoAccount = createAccount(
+        { uid: DEMO_UID, email: "", displayName: "Demo" },
+        "Demo"
+      );
+    }
 
-  window.showTab = function (tabName) {
+    state.demo = true;
+    state.currentUser = {
+      uid: DEMO_UID,
+      email: "",
+      displayName: "Demo"
+    };
+
+    state.accounts = {};
+    state.accounts[DEMO_UID] = demoAccount;
+    state.activeLesson = 0;
+    state.puzzleAnswer = [];
+
+    clearMessage();
+    bindSettingsControls();
+    updateGreeting();
+    renderLessonMenu();
+    renderEditor();
+
+    showCloudMessage(
+      "Demo account: progress is temporary and isn't uploaded.",
+      false
+    );
+
+    showScreen("homeScreen");
+  }
+
+  window.showTab = function (tab) {
     clearMessage();
 
-    if (byId("loginTab")) {
-      byId("loginTab").classList.toggle(
-        "active",
-        tabName === "login"
-      );
-    }
+    var loginTab = byId("loginTab");
+    var signupTab = byId("signupTab");
 
-    if (byId("signupTab")) {
-      byId("signupTab").classList.toggle(
-        "active",
-        tabName === "signup"
-      );
-    }
+    if (loginTab) loginTab.classList.toggle("active", tab === "login");
+    if (signupTab) signupTab.classList.toggle("active", tab === "signup");
 
     document.querySelectorAll(".tabs button").forEach(function (button) {
-      var label = button.textContent
-        .toLowerCase()
-        .replace(/\s+/g, "");
-
-      button.classList.toggle("active", label === tabName);
+      button.classList.toggle(
+        "active",
+        button.textContent.toLowerCase().replace(/\s+/g, "") === tab
+      );
     });
   };
 
   window.signup = async function () {
     if (state.authBusy) return;
 
-    var email = byId("signupEmail");
-    var password = byId("signupPass");
+    var userField = firstId("signupEmail", "signupUser");
+    var passwordField = byId("signupPass");
 
-    if (!email || !password) {
-      setMessage("The updated signup fields are missing from index.html.", true);
+    if (!userField || !passwordField) {
+      setMessage("Signup fields are missing from index.html.", true);
       return;
     }
 
-    var emailValue = email.value.trim();
-    var passwordValue = password.value;
+    var identifier = userField.value.trim();
+    var password = passwordField.value;
 
-    if (!emailValue || !passwordValue) {
+    if (!identifier || !password) {
       setMessage("Enter your email and password.", true);
       return;
     }
 
-    if (passwordValue.length < 6) {
+    if (password.length < 6) {
       setMessage("Your password must have at least 6 characters.", true);
+      return;
+    }
+
+    if (!identifier.includes("@")) {
+      setMessage(
+        "Regular cloud accounts need an email address. Use the demo login for a username-only test.",
+        true
+      );
       return;
     }
 
@@ -369,22 +413,16 @@
 
     try {
       var result = await auth.createUserWithEmailAndPassword(
-        emailValue,
-        passwordValue
+        identifier,
+        password
       );
 
       state.currentUser = result.user;
-      state.accounts[result.user.uid] = createAccount(
-        result.user,
-        ""
-      );
+      state.demo = false;
+      state.accounts[result.user.uid] = createAccount(result.user, "");
 
-      if (email) email.value = "";
-      if (password) password.value = "";
-
-      if (byId("displayNameInput")) {
-        byId("displayNameInput").value = "";
-      }
+      userField.value = "";
+      passwordField.value = "";
 
       showScreen("nameScreen");
     } catch (error) {
@@ -397,24 +435,44 @@
   window.login = async function () {
     if (state.authBusy) return;
 
-    var email = byId("loginEmail");
-    var password = byId("loginPass");
+    var userField = firstId("loginEmail", "loginUser");
+    var passwordField = byId("loginPass");
 
-    if (!email || !password) {
-      setMessage("The updated login fields are missing from index.html.", true);
+    if (!userField || !passwordField) {
+      setMessage("Login fields are missing from index.html.", true);
+      return;
+    }
+
+    var identifier = userField.value.trim();
+    var password = passwordField.value;
+
+    if (identifier === DEMO_USER && password === DEMO_PASS) {
+      userField.value = "";
+      passwordField.value = "";
+      enterDemo();
+      return;
+    }
+
+    if (!identifier || !password) {
+      setMessage("Enter your email and password.", true);
+      return;
+    }
+
+    if (!identifier.includes("@")) {
+      setMessage(
+        "Regular accounts use the email address connected to Firebase. Demo login: TEST-e232 / 14334.",
+        true
+      );
       return;
     }
 
     state.authBusy = true;
 
     try {
-      await auth.signInWithEmailAndPassword(
-        email.value.trim(),
-        password.value
-      );
+      await auth.signInWithEmailAndPassword(identifier, password);
 
-      email.value = "";
-      password.value = "";
+      userField.value = "";
+      passwordField.value = "";
       clearMessage();
     } catch (error) {
       setMessage(authErrorMessage(error), true);
@@ -431,7 +489,6 @@
     try {
       var provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-
       await auth.signInWithPopup(provider);
     } catch (error) {
       if (error.code === "auth/popup-blocked") {
@@ -472,168 +529,126 @@
       return;
     }
 
-    try {
-      await user.updateProfile({ displayName: name });
+    var account = currentAccount();
 
-      var account = currentAccount() || createAccount(user, name);
-      account.username = name;
+    if (!account) {
+      account = createAccount(user, name);
       state.accounts[user.uid] = account;
+    }
 
-      await saveAccounts();
-      updateGreeting();
-      showScreen("homeScreen");
+    account.username = name;
+
+    if (isDemo()) {
+      demoAccount = account;
+    } else {
+      try {
+        if (user.updateProfile) await user.updateProfile({ displayName: name });
+        await saveAccounts();
+      } catch (error) {
+        setMessage(authErrorMessage(error), true);
+        return;
+      }
+    }
+
+    bindSettingsControls();
+    updateGreeting();
+    renderLessonMenu();
+    renderEditor();
+    showScreen("homeScreen");
+  };
+
+  window.logout = async function () {
+    if (isDemo()) {
+      state.demo = false;
+      state.currentUser = null;
+      state.accounts = {};
+      demoAccount = null;
+      clearMessage();
+      showScreen("authScreen");
+      window.showTab("login");
+      return;
+    }
+
+    try {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        await saveAccounts();
+      }
+
+      await auth.signOut();
     } catch (error) {
       setMessage(authErrorMessage(error), true);
     }
   };
 
-  window.logout = async function () {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    try {
-      await auth.signOut();
-      state.activeLesson = 0;
-      state.puzzleAnswer = [];
-      showScreen("authScreen");
-      window.showTab("login");
-    } catch (error) {
-      alert(authErrorMessage(error));
-    }
-  };
-
-  // ---------------------------------------------------------
-  // TYPING LESSONS
-  // ---------------------------------------------------------
-
-  function ensureProgressBar() {
-    var typingScreen = byId("typingScreen");
-    if (!typingScreen) return;
-
-    var box = typingScreen.querySelector(".lesson-box");
-    var input = byId("typingInput");
-    var progress = byId("typingProgressWrap");
-
-    if (!box || !input || progress) return;
-
-    progress = document.createElement("div");
-    progress.id = "typingProgressWrap";
-    progress.className = "progress-wrap";
-
-    progress.innerHTML =
-      '<div class="progress-label">' +
-        "<span>Progress</span>" +
-        '<span id="progressText">0%</span>' +
-      "</div>" +
-      '<div class="progress-track">' +
-        '<div id="progressFill" class="progress-fill"></div>' +
-      "</div>";
-
-    box.insertBefore(progress, input);
-  }
-
-  function setProgress(percent) {
-    var safePercent = Math.max(
-      0,
-      Math.min(100, Math.round(percent))
-    );
-
-    var fill = byId("progressFill");
-    var text = byId("progressText");
-
-    if (fill) fill.style.width = safePercent + "%";
-    if (text) text.textContent = safePercent + "%";
-  }
-
-  function renderSentenceHighlight() {
-    var sentence = byId("sentence");
-    var input = byId("typingInput");
-
-    if (!sentence || !input) return;
-
-    var target = lessonText(state.activeLesson);
-    var typed = input.value;
-    var html = "";
-
-    for (var index = 0; index < target.length; index += 1) {
-      var className = "char";
-
-      if (index < typed.length) {
-        className += typed[index] === target[index]
-          ? " correct"
-          : " incorrect";
-      } else if (index === typed.length) {
-        className += " current";
-      }
-
-      html += '<span class="' + className + '">' +
-        escapeHtml(target[index]) +
-        "</span>";
-    }
-
-    sentence.innerHTML = html;
-  }
-
   function updateTypingStats() {
     var input = byId("typingInput");
     if (!input) return;
 
-    var target = lessonText(state.activeLesson);
     var typed = input.value;
-    var correctCount = 0;
+    var words = typed.trim() ? typed.trim().split(/\s+/).length : 0;
+    var targetWords = lessonText(state.activeLesson).trim().split(/\s+/).length;
+    var accuracy = 0;
 
-    for (var index = 0; index < typed.length; index += 1) {
-      if (typed[index] === target[index]) {
-        correctCount += 1;
+    if (typed.length) {
+      var target = lessonText(state.activeLesson);
+      var correct = 0;
+
+      for (var i = 0; i < Math.min(typed.length, target.length); i++) {
+        if (typed[i] === target[i]) correct++;
       }
+
+      accuracy = Math.round((correct / typed.length) * 100);
     }
 
-    var accuracy = typed.length
-      ? Math.round((correctCount / typed.length) * 100)
-      : 100;
+    var accuracyElement = byId("accuracy");
+    var wpmElement = byId("wpm");
 
-    var elapsedMinutes = state.typingStartedAt
-      ? (Date.now() - state.typingStartedAt) / 60000
-      : 0;
+    if (accuracyElement) accuracyElement.textContent = accuracy + "%";
 
-    var wordsTyped = typed.trim()
-      ? typed.trim().split(/\s+/).length
-      : 0;
+    if (wpmElement) {
+      var elapsed = state.typingStartedAt
+        ? (Date.now() - state.typingStartedAt) / 60000
+        : 0;
 
-    var wpm = elapsedMinutes > 0
-      ? Math.round(wordsTyped / elapsedMinutes)
-      : 0;
-
-    var progress = target.length
-      ? Math.min(typed.length, target.length) / target.length * 100
-      : 0;
-
-    if (byId("accuracy")) {
-      byId("accuracy").textContent = "Accuracy: " + accuracy + "%";
+      var wpm = elapsed > 0 ? Math.round(words / elapsed) : 0;
+      wpmElement.textContent = wpm + " WPM";
     }
-
-    if (byId("wpm")) {
-      byId("wpm").textContent = "WPM: " + wpm;
-    }
-
-    setProgress(progress);
-    renderSentenceHighlight();
   }
 
   function completedWordFromTyping() {
     var input = byId("typingInput");
     if (!input) return;
 
-    var value = input.value;
-    var words = value.trim().split(/\s+/).filter(Boolean);
+    var words = input.value.trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return;
 
-    if (!value.endsWith(" ") || words.length <= state.lastSpokenWordCount) {
-      return;
+    var count = words.length;
+
+    if (count > state.lastSpokenWordCount) {
+      speak(words[count - 1]);
+      state.lastSpokenWordCount = count;
     }
+  }
 
-    state.lastSpokenWordCount = words.length;
-    speak(words[words.length - 1]);
+  function ensureProgressBar() {
+    var screen = byId("typingScreen");
+    if (!screen || byId("typeflowProgress")) return;
+
+    var bar = document.createElement("div");
+    bar.id = "typeflowProgress";
+    bar.className = "progress-bar";
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-label", "Typing progress");
+    bar.innerHTML = '<div class="progress-fill"></div>';
+
+    var sentence = byId("sentence");
+    if (sentence && sentence.parentNode) {
+      sentence.parentNode.insertBefore(bar, sentence.nextSibling);
+    } else {
+      screen.appendChild(bar);
+    }
   }
 
   function markLessonComplete(index) {
@@ -654,34 +669,27 @@
     scheduleSave();
   }
 
-  function isUnlocked(index) {
-    var account = currentAccount();
-    return Boolean(account && account.unlockedLessons.includes(index));
-  }
+  function showCompletion(final, handler, label) {
+    var screen = byId("finalScreen");
+    if (!screen) return;
 
-  function showCompletion(isFinal, keepGoingHandlerName, keepGoingLabel) {
-    var finalScreen = byId("finalScreen");
-    if (!finalScreen) return;
+    var card = screen.querySelector(".final-card");
+    if (!card) return;
 
-    var finalCard = finalScreen.querySelector(".final-card");
-    if (!finalCard) return;
-
-    finalCard.innerHTML = [
-      "<h1>" + (isFinal ? "Congratulations!" : "Good Job!") + "</h1>",
-      '<div class="stars" aria-label="Three completion stars">★ ★ ★</div>',
-      "<p>" + (
-        isFinal
-          ? "You finished every unlocked lesson."
-          : "You completed this lesson."
-      ) + "</p>",
-      '<div class="final-actions">',
-      isFinal
+    card.innerHTML =
+      "<h1>" + (final ? "Congratulations!" : "Good Job!") + "</h1>" +
+      '<div class="stars" aria-label="Three completion stars">★ ★ ★</div>' +
+      "<p>" +
+      (final
+        ? "You finished every unlocked lesson."
+        : "You completed this lesson.") +
+      "</p>" +
+      '<div class="final-actions">' +
+      (final
         ? ""
-        : '<button onclick="' + keepGoingHandlerName + '()">' +
-          keepGoingLabel + "</button>",
-      '<button class="secondary" onclick="backHome()">Main Menu</button>',
-      "</div>"
-    ].join("");
+        : '<button onclick="' + handler + '()">' + label + "</button>") +
+      '<button class="secondary" onclick="backHome()">Main Menu</button>' +
+      "</div>";
 
     showScreen("finalScreen");
   }
@@ -693,24 +701,21 @@
     if (!grid) return;
 
     var lessons = allLessons();
-    var heading = byId("lessonScreen")
-      ? byId("lessonScreen").querySelector("h2")
-      : null;
+    var screen = byId("lessonScreen");
+    var heading = screen ? screen.querySelector("h2") : null;
 
     if (heading) {
-      heading.textContent = state.mode === "puzzle"
-        ? "Sentence Puzzles"
-        : "Typing Lessons";
+      heading.textContent =
+        state.mode === "puzzle" ? "Sentence Puzzles" : "Typing Lessons";
     }
 
     grid.innerHTML = "";
 
     lessons.forEach(function (lesson, index) {
       var unlocked = isUnlocked(index);
-      var completed = account &&
-        account.completedLessons.includes(index);
-
+      var completed = account && account.completedLessons.includes(index);
       var card = document.createElement("div");
+
       card.className = "lesson-card" + (unlocked ? "" : " locked");
       card.tabIndex = unlocked ? 0 : -1;
       card.setAttribute("role", "button");
@@ -721,19 +726,18 @@
           : "Lesson " + (index + 1) + " is locked"
       );
 
-      card.innerHTML = [
-        '<div class="lesson-top">',
-        '<span class="lesson-number">' + (index + 1) + "</span>",
-        '<span class="lesson-status">' +
-          (completed ? "★" : unlocked ? "→" : "🔒") +
-        "</span>",
-        "</div>",
-        "<h3>Lesson " + (index + 1) + "</h3>",
-        '<p class="lesson-preview">' + escapeHtml(lesson) + "</p>",
-        '<div class="lesson-meta">' +
-          (completed ? "Completed" : unlocked ? "Ready" : "Locked") +
-        "</div>"
-      ].join("");
+      card.innerHTML =
+        '<div class="lesson-top"><span class="lesson-number">' +
+        (index + 1) +
+        '</span><span class="lesson-status">' +
+        (completed ? "★" : unlocked ? "→" : "🔒") +
+        "</span></div><h3>Lesson " +
+        (index + 1) +
+        '</h3><p class="lesson-preview">' +
+        escapeHtml(lesson) +
+        '</p><div class="lesson-meta">' +
+        (completed ? "Completed" : unlocked ? "Ready" : "Locked") +
+        "</div>";
 
       if (unlocked) {
         card.addEventListener("click", function () {
@@ -750,6 +754,11 @@
 
       grid.appendChild(card);
     });
+  }
+
+  function isUnlocked(index) {
+    var account = currentAccount();
+    return !!(account && account.unlockedLessons.includes(index));
   }
 
   function openLesson(index) {
@@ -769,6 +778,10 @@
 
     ensureProgressBar();
 
+    if (byId("sentence")) {
+      byId("sentence").textContent = lessonText(index);
+    }
+
     if (byId("typingInput")) {
       byId("typingInput").value = "";
     }
@@ -776,119 +789,93 @@
     updateTypingStats();
     showScreen("typingScreen");
 
-    if (byId("typingInput")) {
-      byId("typingInput").focus();
-    }
+    if (byId("typingInput")) byId("typingInput").focus();
   }
-
-  // ---------------------------------------------------------
-  // SENTENCE PUZZLES
-  // ---------------------------------------------------------
 
   function shuffleWords(words) {
-    var shuffled = words.slice();
+    words = words.slice();
 
-    for (var index = shuffled.length - 1; index > 0; index -= 1) {
-      var randomIndex = Math.floor(Math.random() * (index + 1));
-      var temp = shuffled[index];
-      shuffled[index] = shuffled[randomIndex];
-      shuffled[randomIndex] = temp;
+    for (var i = words.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = words[i];
+      words[i] = words[j];
+      words[j] = temp;
     }
 
-    return shuffled;
+    return words;
   }
 
-  function buildWordTile(word, originalIndex, inAnswer) {
-    var tile = document.createElement("button");
-    tile.type = "button";
-    tile.className = "word-tile" + (inAnswer ? " in-answer" : "");
-    tile.textContent = word;
-    tile.dataset.word = word;
-    tile.dataset.originalIndex = String(originalIndex);
+  function buildWordTile(word, id, selected) {
+    var button = document.createElement("button");
 
-    tile.addEventListener("click", function () {
+    button.type = "button";
+    button.className = "word-tile" + (selected ? " in-answer" : "");
+    button.textContent = word;
+
+    button.addEventListener("click", function () {
       speak(word);
 
-      if (inAnswer) {
+      if (selected) {
         state.puzzleAnswer = state.puzzleAnswer.filter(function (item) {
-          return item.id !== originalIndex;
+          return item.id !== id;
         });
       } else {
-        state.puzzleAnswer.push({
-          id: originalIndex,
-          word: word
-        });
+        state.puzzleAnswer.push({ id: id, word: word });
       }
 
       renderPuzzle();
     });
 
-    return tile;
-  }
-
-  function currentPuzzleWords() {
-    return lessonText(state.activeLesson)
-      .split(/\s+/)
-      .filter(Boolean);
+    return button;
   }
 
   function renderPuzzle() {
-    var wordBank = byId("wordBank");
-    var answerArea = byId("answerArea");
+    var bank = byId("wordBank");
+    var area = byId("answerArea");
 
-    if (!wordBank || !answerArea) return;
+    if (!bank || !area) return;
 
     var selectedIds = state.puzzleAnswer.map(function (item) {
       return item.id;
     });
 
-    wordBank.innerHTML = "";
-    answerArea.innerHTML = "";
+    bank.innerHTML = "";
+    area.innerHTML = "";
 
     state.puzzleShuffled.forEach(function (item) {
       if (!selectedIds.includes(item.id)) {
-        wordBank.appendChild(
-          buildWordTile(item.word, item.id, false)
-        );
+        bank.appendChild(buildWordTile(item.word, item.id, false));
       }
     });
 
     state.puzzleAnswer.forEach(function (item) {
-      answerArea.appendChild(
-        buildWordTile(item.word, item.id, true)
-      );
+      area.appendChild(buildWordTile(item.word, item.id, true));
     });
 
-    if (!wordBank.children.length) {
-      wordBank.innerHTML =
+    if (!bank.children.length) {
+      bank.innerHTML =
         '<span class="lesson-meta">All words are in the answer area.</span>';
     }
 
-    if (!answerArea.children.length) {
-      answerArea.innerHTML =
+    if (!area.children.length) {
+      area.innerHTML =
         '<span class="lesson-meta">Click words in order to build the sentence.</span>';
     }
   }
 
   function startPuzzle(index) {
-    var words = lessonText(index).split(/\s+/).filter(Boolean);
-
     state.activeLesson = index;
     state.puzzleAnswer = [];
 
     state.puzzleShuffled = shuffleWords(
-      words.map(function (word, wordIndex) {
-        return { id: wordIndex, word: word };
+      lessonText(index).split(/\s+/).filter(Boolean).map(function (word, id) {
+        return { id: id, word: word };
       })
     );
 
     renderPuzzle();
     showScreen("puzzleScreen");
   }
-
-  // ---------------------------------------------------------
-  // CUSTOM LESSON EDITOR
-  // ---------------------------------------------------------
 
   function renderEditor() {
     var list = byId("customLessons");
@@ -910,55 +897,48 @@
 
       var input = document.createElement("input");
       input.value = lesson;
-      input.setAttribute(
-        "aria-label",
-        "Custom lesson " + (index + 1)
-      );
+      input.setAttribute("aria-label", "Custom lesson " + (index + 1));
 
-      var saveButton = document.createElement("button");
-      saveButton.type = "button";
-      saveButton.textContent = "Save";
-      saveButton.addEventListener("click", function () {
+      var save = document.createElement("button");
+      save.type = "button";
+      save.textContent = "Save";
+      save.addEventListener("click", function () {
         window.editLesson(index, input.value);
       });
 
-      var deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "delete";
-      deleteButton.textContent = "Delete";
-      deleteButton.addEventListener("click", function () {
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "delete";
+      remove.textContent = "Delete";
+      remove.addEventListener("click", function () {
         window.deleteLesson(index);
       });
 
       row.appendChild(input);
-      row.appendChild(saveButton);
-      row.appendChild(deleteButton);
+      row.appendChild(save);
+      row.appendChild(remove);
       list.appendChild(row);
     });
   }
 
-  function syncLessonAccessAfterLessonChange() {
+  function syncLessonAccess() {
     var account = currentAccount();
     if (!account) return;
 
     var count = allLessons().length;
 
-    account.completedLessons = account.completedLessons.filter(function (index) {
-      return index < count;
+    account.completedLessons = account.completedLessons.filter(function (i) {
+      return i < count;
     });
 
-    account.unlockedLessons = account.unlockedLessons.filter(function (index) {
-      return index < count;
+    account.unlockedLessons = account.unlockedLessons.filter(function (i) {
+      return i < count;
     });
 
     if (!account.unlockedLessons.includes(0)) {
       account.unlockedLessons.push(0);
     }
   }
-
-  // ---------------------------------------------------------
-  // NAVIGATION
-  // ---------------------------------------------------------
 
   window.openTyping = function () {
     state.mode = "typing";
@@ -991,26 +971,18 @@
     speak(lessonText(state.activeLesson));
   };
 
-  // ---------------------------------------------------------
-  // CHECKING TYPING AND PUZZLES
-  // ---------------------------------------------------------
-
   window.checkTyping = function () {
-    var target = normalizeText(lessonText(state.activeLesson));
     var input = byId("typingInput");
     if (!input) return;
 
-    var typed = normalizeText(input.value);
-    var isCorrect = typed === target;
-
-    updateTypingStats();
-
-    if (!isCorrect) {
+    if (normalizeText(input.value) !== normalizeText(lessonText(state.activeLesson))) {
+      updateTypingStats();
       input.focus();
       return;
     }
 
     markLessonComplete(state.activeLesson);
+    renderLessonMenu();
 
     showCompletion(
       state.activeLesson >= allLessons().length - 1,
@@ -1027,14 +999,13 @@
       return;
     }
 
-    var nextIndex = state.activeLesson + 1;
+    var next = state.activeLesson + 1;
 
-    if (nextIndex >= allLessons().length) {
+    if (next >= allLessons().length) {
       showCompletion(true, "nextLesson", "Next Lesson");
-      return;
+    } else {
+      startTyping(next);
     }
-
-    startTyping(nextIndex);
   };
 
   window.checkPuzzle = function () {
@@ -1046,10 +1017,10 @@
     );
 
     if (answer !== expected) {
-      var answerArea = byId("answerArea");
+      var area = byId("answerArea");
 
-      if (answerArea && answerArea.animate) {
-        answerArea.animate(
+      if (area && area.animate) {
+        area.animate(
           [
             { transform: "translateX(0)" },
             { transform: "translateX(-8px)" },
@@ -1064,6 +1035,7 @@
     }
 
     markLessonComplete(state.activeLesson);
+    renderLessonMenu();
 
     showCompletion(
       state.activeLesson >= allLessons().length - 1,
@@ -1080,19 +1052,14 @@
       return;
     }
 
-    var nextIndex = state.activeLesson + 1;
+    var next = state.activeLesson + 1;
 
-    if (nextIndex >= allLessons().length) {
+    if (next >= allLessons().length) {
       showCompletion(true, "nextPuzzle", "Keep Going");
-      return;
+    } else {
+      startPuzzle(next);
     }
-
-    startPuzzle(nextIndex);
   };
-
-  // ---------------------------------------------------------
-  // CUSTOM LESSON ACTIONS
-  // ---------------------------------------------------------
 
   window.addLesson = function () {
     var input = byId("newLessonText");
@@ -1100,54 +1067,58 @@
 
     if (!input || !account) return;
 
-    var sentence = normalizeText(input.value);
+    var text = normalizeText(input.value);
 
-    if (!sentence) {
+    if (!text) {
       input.focus();
       return;
     }
 
-    account.customLessons.push(sentence);
-    syncLessonAccessAfterLessonChange();
+    account.customLessons.push(text);
+    syncLessonAccess();
     scheduleSave();
 
     input.value = "";
     renderEditor();
+    renderLessonMenu();
   };
 
-  window.editLesson = function (customIndex, value) {
+  window.editLesson = function (index, value) {
     var account = currentAccount();
-    var sentence = normalizeText(value);
+    var text = normalizeText(value);
 
-    if (!account || !sentence) return;
-    if (customIndex < 0 || customIndex >= account.customLessons.length) return;
+    if (!account || !text || index < 0 || index >= account.customLessons.length) {
+      return;
+    }
 
-    account.customLessons[customIndex] = sentence;
+    account.customLessons[index] = text;
     scheduleSave();
     renderEditor();
+    renderLessonMenu();
   };
 
-  window.deleteLesson = function (customIndex) {
+  window.deleteLesson = function (index) {
     var account = currentAccount();
 
-    if (!account) return;
-    if (customIndex < 0 || customIndex >= account.customLessons.length) return;
+    if (!account || index < 0 || index >= account.customLessons.length) {
+      return;
+    }
 
-    account.customLessons.splice(customIndex, 1);
-    syncLessonAccessAfterLessonChange();
+    account.customLessons.splice(index, 1);
+    syncLessonAccess();
     scheduleSave();
     renderEditor();
+    renderLessonMenu();
   };
-
-  // ---------------------------------------------------------
-  // SETTINGS SUPPORT
-  // ---------------------------------------------------------
 
   window.setSpeakWords = function (enabled) {
     var account = currentAccount();
     if (!account) return;
 
-    account.settings.speakWords = Boolean(enabled);
+    account.settings.speakWords = !!enabled;
+
+    if (isDemo()) demoAccount = account;
+
     scheduleSave();
   };
 
@@ -1159,29 +1130,67 @@
     if (!Number.isFinite(value)) return;
 
     account.settings.voiceRate = Math.max(0.5, Math.min(2, value));
+
+    if (isDemo()) demoAccount = account;
+
     scheduleSave();
   };
 
-  // ---------------------------------------------------------
-  // EVENTS AND INITIALIZATION
-  // ---------------------------------------------------------
+  function bindSettingsControls() {
+    var account = currentAccount();
+    var toggle = byId("speakWordsSetting");
+    var rate = byId("voiceRateSetting");
+    var label = byId("voiceRateValue");
+
+    if (!account) return;
+
+    if (toggle) {
+      toggle.checked = account.settings.speakWords !== false;
+
+      if (!toggle.dataset.typeflowBound) {
+        toggle.addEventListener("change", function () {
+          window.setSpeakWords(toggle.checked);
+        });
+
+        toggle.dataset.typeflowBound = "true";
+      }
+    }
+
+    if (rate) {
+      rate.value = String(account.settings.voiceRate || 0.9);
+
+      if (label) {
+        label.textContent = Number(rate.value).toFixed(1) + "×";
+      }
+
+      if (!rate.dataset.typeflowBound) {
+        rate.addEventListener("input", function () {
+          window.setVoiceRate(rate.value);
+
+          if (label) {
+            label.textContent = Number(rate.value).toFixed(1) + "×";
+          }
+        });
+
+        rate.dataset.typeflowBound = "true";
+      }
+    }
+  }
 
   function bindEvents() {
-    var typingInput = byId("typingInput");
+    var input = byId("typingInput");
 
-    if (typingInput) {
-      typingInput.addEventListener("input", function () {
-        if (!state.typingStartedAt && typingInput.value.length) {
+    if (input) {
+      input.addEventListener("input", function () {
+        if (!state.typingStartedAt && input.value.length) {
           state.typingStartedAt = Date.now();
         }
 
         updateTypingStats();
 
-        if (
-          normalizeText(typingInput.value) ===
-          normalizeText(lessonText(state.activeLesson))
-        ) {
+        if (normalizeText(input.value) === normalizeText(lessonText(state.activeLesson))) {
           markLessonComplete(state.activeLesson);
+          renderLessonMenu();
 
           showCompletion(
             state.activeLesson >= allLessons().length - 1,
@@ -1191,17 +1200,15 @@
         }
       });
 
-      typingInput.addEventListener("keyup", function (event) {
-        if (event.key === " ") {
-          completedWordFromTyping();
-        }
+      input.addEventListener("keyup", function (event) {
+        if (event.key === " ") completedWordFromTyping();
       });
     }
 
-    var newLessonText = byId("newLessonText");
+    var lessonInput = byId("newLessonText");
 
-    if (newLessonText) {
-      newLessonText.addEventListener("keydown", function (event) {
+    if (lessonInput) {
+      lessonInput.addEventListener("keydown", function (event) {
         if (event.key === "Enter") {
           event.preventDefault();
           window.addLesson();
@@ -1209,40 +1216,35 @@
       });
     }
 
-    var displayNameInput = byId("displayNameInput");
+    var nameInput = byId("displayNameInput");
 
-    if (displayNameInput) {
-      displayNameInput.addEventListener("keydown", function (event) {
-        if (event.key === "Enter") {
-          window.saveDisplayName();
-        }
+    if (nameInput) {
+      nameInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") window.saveDisplayName();
       });
     }
+
+    bindSettingsControls();
   }
 
   function init() {
     bindEvents();
-
-    if (typeof window.showTab === "function") {
-      window.showTab("login");
-    }
+    window.showTab("login");
 
     auth.getRedirectResult().catch(function (error) {
       setMessage(authErrorMessage(error), true);
     });
 
     auth.onAuthStateChanged(async function (user) {
+      if (state.demo) return;
+
       state.currentUser = user;
 
       if (!user) {
         state.accounts = {};
         state.authReady = true;
         showScreen("authScreen");
-
-        if (typeof window.showTab === "function") {
-          window.showTab("login");
-        }
-
+        window.showTab("login");
         return;
       }
 
@@ -1260,3 +1262,4 @@
 
   document.addEventListener("DOMContentLoaded", init);
 }());
+
