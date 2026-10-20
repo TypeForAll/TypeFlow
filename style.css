@@ -1,75 +1,62 @@
 
-/* =========================================================
-   TYPEFLOW — CALM, ACCESSIBLE LIGHT DESIGN
-   Soft blue background • White cards • Rounded controls
-   ========================================================= */
+/* =====================================================
+   TYPEFLOW — SOFT BLUE CARD DESIGN
+   Visual redesign only. Preserve app functionality.
+   ===================================================== */
 
 :root {
   color-scheme: light;
 
-  --primary: #4779f5;
-  --primary-hover: #3566e5;
-  --primary-soft: #edf3ff;
+  --primary: #3978df;
+  --primary-hover: #2864c5;
+  --primary-soft: #e7f1ff;
 
-  --secondary: #8067e8;
-  --secondary-soft: #f1edff;
+  --secondary: #7967ce;
+  --secondary-soft: #f0edff;
 
-  --success: #279b75;
-  --success-soft: #e7f8f0;
+  --success: #258767;
+  --success-soft: #e5f6ee;
 
-  --warning: #e5a33b;
-  --warning-soft: #fff5df;
+  --warning: #94651b;
+  --warning-soft: #fff4d9;
 
-  --danger: #df626f;
+  --danger: #bd4858;
   --danger-soft: #fff0f1;
 
-  /* Calm light-blue page background */
-  --background: #edf5ff;
-
-  /* White cards */
+  --background: #eaf3ff;
   --surface: #ffffff;
-  --surface-soft: #f7faff;
+  --surface-soft: #f6f9ff;
 
-  --text: #202b45;
-  --text-secondary: #53627d;
-  --text-muted: #77849d;
+  --text: #233451;
+  --text-secondary: #536681;
+  --text-muted: #71829b;
 
-  --border: #e0e9f6;
-  --border-strong: #ccd9ec;
+  --border: #d5e4f7;
+  --border-strong: #b9d0ef;
 
-  --radius-sm: 12px;
-  --radius-md: 18px;
-  --radius-lg: 24px;
-  --radius-xl: 30px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
 
-  --shadow-sm: 0 3px 12px rgba(48, 83, 140, 0.06);
-  --shadow-md: 0 8px 24px rgba(48, 83, 140, 0.09);
-  --shadow-lg: 0 14px 38px rgba(48, 83, 140, 0.12);
+  --shadow-sm: 0 2px 8px rgba(43, 82, 137, 0.05);
+  --shadow-md: 0 5px 16px rgba(43, 82, 137, 0.08);
+  --shadow-lg: 0 10px 28px rgba(43, 82, 137, 0.11);
 
-  --focus-ring: 0 0 0 4px rgba(71, 121, 245, 0.22);
+  --focus-ring: 0 0 0 4px rgba(57, 120, 223, 0.2);
 }
 
-/* =========================================================
-   BASE
-   ========================================================= */
+/* BASE */
 
 * {
   box-sizing: border-box;
-}
-
-html {
-  color-scheme: light;
 }
 
 body {
   margin: 0;
   background: var(--background);
   color: var(--text);
-  font-family:
-    Inter,
-    "Segoe UI",
-    Arial,
-    sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -81,18 +68,6 @@ body {
   color: var(--text);
 }
 
-img,
-video,
-canvas,
-svg {
-  max-width: 100%;
-}
-
-img,
-video {
-  border-radius: var(--radius-md);
-}
-
 h1,
 h2,
 h3,
@@ -101,20 +76,7 @@ h5,
 h6 {
   color: var(--text);
   line-height: 1.3;
-  font-weight: 750;
-  overflow-wrap: anywhere;
-}
-
-h1 {
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-}
-
-h2 {
-  font-size: clamp(1.4rem, 3vw, 2rem);
-}
-
-h3 {
-  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 p {
@@ -130,7 +92,6 @@ small,
 a {
   color: var(--primary);
   font-weight: 600;
-  text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
 }
 
@@ -141,25 +102,18 @@ a:hover {
 hr {
   border: 0;
   border-top: 1px solid var(--border);
-  margin: 24px 0;
+  margin: 22px 0;
 }
 
-::selection {
-  background: #dce8ff;
-  color: #203d7a;
-}
-
-/* =========================================================
-   HEADER / NAVIGATION
-   ========================================================= */
+/* HEADER */
 
 #app > header,
 .app-header,
 .topbar,
 .navbar {
-  background: rgba(255, 255, 255, 0.96);
+  background: #ffffff;
   color: var(--text);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
 
@@ -169,32 +123,14 @@ hr {
   padding: 14px 22px;
 }
 
-header h1,
-header h2,
-header h3,
-.app-header h1,
-.app-header h2,
-.topbar h1,
-.topbar h2 {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
 nav {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
-nav a,
-nav button {
-  border-radius: 14px;
-}
-
-/* =========================================================
-   MAIN CONTENT
-   ========================================================= */
+/* PAGE LAYOUT */
 
 main {
   width: 100%;
@@ -203,18 +139,13 @@ main {
   padding: 24px;
 }
 
-section {
-  color: var(--text);
-}
-
 .screen {
   width: 100%;
   padding: 24px;
+  background: var(--background);
 }
 
-/* =========================================================
-   CARDS — WHITE, SOFT, ROUNDED
-   ========================================================= */
+/* WHITE CARDS WITH CLEAR BLUE OUTLINES */
 
 .card,
 .panel,
@@ -229,11 +160,11 @@ section {
 .stat-card,
 .video-card,
 .feature-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  color: var(--text);
   padding: 24px;
 }
 
@@ -242,12 +173,8 @@ section {
 .dashboard-card,
 .lesson-card,
 .feature-card,
-.stat-card,
-.video-card {
-  transition:
-    box-shadow 180ms ease,
-    border-color 180ms ease,
-    transform 180ms ease;
+.stat-card {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .card:hover,
@@ -273,7 +200,30 @@ section {
   margin-bottom: 0;
 }
 
-/* Common card grids */
+/* SECTION DIVIDERS */
+
+.section-divider {
+  height: 1px;
+  width: 100%;
+  background: var(--border);
+  margin: 22px 0;
+}
+
+.dashboard-section,
+.lesson-section,
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.dashboard-section > h2,
+.lesson-section > h2,
+.settings-section > h2 {
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 18px;
+}
+
+/* CARD GRIDS */
 
 .dashboard-grid,
 .lesson-grid,
@@ -283,13 +233,11 @@ section {
 .puzzle-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 18px;
   align-items: stretch;
 }
 
-/* =========================================================
-   BUTTONS
-   ========================================================= */
+/* BUTTONS */
 
 button,
 .button,
@@ -298,23 +246,19 @@ input[type="button"],
 input[type="submit"],
 input[type="reset"] {
   appearance: none;
-  border: 1px solid transparent;
-  border-radius: 16px;
+  border: 1px solid var(--primary);
+  border-radius: 14px;
   padding: 12px 20px;
   min-height: 46px;
   background: var(--primary);
   color: #ffffff;
   font: inherit;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.4;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(71, 121, 245, 0.14);
-  transition:
-    background-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease,
-    border-color 160ms ease;
+  box-shadow: 0 3px 0 rgba(34, 83, 161, 0.12);
+  transition: background 150ms ease, box-shadow 150ms ease;
 }
 
 button:hover,
@@ -324,16 +268,13 @@ input[type="button"]:hover,
 input[type="submit"]:hover,
 input[type="reset"]:hover {
   background: var(--primary-hover);
-  box-shadow: 0 6px 16px rgba(71, 121, 245, 0.22);
+  border-color: var(--primary-hover);
 }
 
 button:active,
 .button:active,
-.btn:active,
-input[type="button"]:active,
-input[type="submit"]:active,
-input[type="reset"]:active {
-  transform: translateY(1px);
+.btn:active {
+  box-shadow: none;
 }
 
 button:disabled,
@@ -352,8 +293,8 @@ button.secondary,
 .btn-secondary,
 .secondary-button {
   background: var(--secondary-soft);
-  border-color: #e1d8ff;
-  color: #5842b2;
+  border-color: #d8d0fa;
+  color: #51429b;
   box-shadow: none;
 }
 
@@ -361,13 +302,14 @@ button.secondary:hover,
 .button.secondary:hover,
 .btn-secondary:hover,
 .secondary-button:hover {
-  background: #e5ddff;
+  background: #e4defe;
 }
 
 button.success,
 .btn-success,
 .success-button {
   background: var(--success);
+  border-color: var(--success);
   color: #ffffff;
 }
 
@@ -375,6 +317,7 @@ button.danger,
 .btn-danger,
 .danger-button {
   background: var(--danger);
+  border-color: var(--danger);
   color: #ffffff;
 }
 
@@ -398,7 +341,7 @@ button.small,
 .btn-small {
   min-height: 36px;
   padding: 8px 13px;
-  border-radius: 12px;
+  border-radius: 11px;
   font-size: 0.9rem;
 }
 
@@ -411,9 +354,7 @@ button.small,
   gap: 12px;
 }
 
-/* =========================================================
-   INPUTS / FORMS
-   ========================================================= */
+/* INPUTS */
 
 label {
   display: inline-block;
@@ -427,16 +368,12 @@ textarea,
 select {
   max-width: 100%;
   border: 1.5px solid var(--border-strong);
-  border-radius: 15px;
+  border-radius: 13px;
   padding: 12px 15px;
   background: #ffffff;
   color: var(--text);
   font: inherit;
   line-height: 1.5;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background-color 160ms ease;
 }
 
 input::placeholder,
@@ -448,7 +385,7 @@ textarea::placeholder {
 input:hover,
 textarea:hover,
 select:hover {
-  border-color: #aebfe0;
+  border-color: #8eafe0;
 }
 
 input:focus,
@@ -464,12 +401,6 @@ input[type="radio"] {
   accent-color: var(--primary);
 }
 
-input[type="checkbox"],
-input[type="radio"],
-input[type="range"] {
-  cursor: pointer;
-}
-
 textarea {
   resize: vertical;
 }
@@ -482,9 +413,7 @@ form > * + * {
   margin-top: 12px;
 }
 
-/* =========================================================
-   AUTHENTICATION / SIGN-IN
-   ========================================================= */
+/* SIGN-IN */
 
 #authScreen,
 #nameScreen {
@@ -498,8 +427,9 @@ form > * + * {
   width: 100%;
   max-width: 460px;
   margin: 0 auto;
-  padding: 34px;
+  padding: 32px;
   border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border);
   box-shadow: var(--shadow-lg);
 }
 
@@ -527,16 +457,12 @@ form > * + * {
   width: 100%;
 }
 
-.auth-card button {
-  margin-top: 5px;
-}
-
 .auth-card .divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: var(--text-muted);
   margin: 18px 0;
+  color: var(--text-muted);
 }
 
 .auth-card .divider::before,
@@ -544,15 +470,22 @@ form > * + * {
   content: "";
   height: 1px;
   flex: 1;
-  background: var(--border);
+  background: var(--border-strong);
 }
 
-/* =========================================================
-   DASHBOARD
-   ========================================================= */
+/* DASHBOARD */
 
 #dashboardScreen,
-#homeScreen {
+#homeScreen,
+#lessonsScreen,
+#typingScreen,
+#puzzlesScreen,
+#gamesScreen,
+#editorScreen,
+#settingsScreen,
+#finalScreen,
+#completionScreen,
+#resultsScreen {
   background: var(--background);
 }
 
@@ -571,7 +504,6 @@ form > * + * {
 .dashboard-card {
   position: relative;
   min-width: 0;
-  padding: 24px;
 }
 
 .dashboard-card h2,
@@ -587,7 +519,7 @@ form > * + * {
   width: 52px;
   height: 52px;
   margin-bottom: 14px;
-  border-radius: 17px;
+  border-radius: 16px;
   background: var(--primary-soft);
   color: var(--primary);
   font-size: 1.5rem;
@@ -598,12 +530,7 @@ form > * + * {
   overflow: hidden;
   height: 12px;
   border-radius: 999px;
-  background: #e3ebf8;
-}
-
-.progress-bar > *,
-.progress > * {
-  border-radius: inherit;
+  background: #dce8f8;
 }
 
 progress {
@@ -612,13 +539,7 @@ progress {
   accent-color: var(--primary);
 }
 
-/* =========================================================
-   LESSONS
-   ========================================================= */
-
-#lessonsScreen {
-  background: var(--background);
-}
+/* LESSONS */
 
 .lesson-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -652,25 +573,19 @@ progress {
   justify-content: center;
   width: 58px;
   height: 58px;
-  border-radius: 18px;
+  border-radius: 17px;
   background: var(--primary-soft);
   color: var(--primary);
   font-size: 1.7rem;
 }
 
-/* =========================================================
-   TYPING PRACTICE
-   ========================================================= */
-
-#typingScreen {
-  background: var(--background);
-}
+/* TYPING PRACTICE */
 
 .typing-card {
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  padding: 30px;
+  padding: 28px;
 }
 
 .typing-card h1,
@@ -690,7 +605,7 @@ progress {
 .stat-card {
   min-width: 0;
   padding: 17px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-soft);
   text-align: center;
@@ -714,9 +629,9 @@ progress {
 #typingText,
 .typing-prompt {
   padding: 24px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
-  background: #f7faff;
+  background: var(--surface-soft);
   color: var(--text);
   font-size: clamp(1.1rem, 2.4vw, 1.45rem);
   line-height: 2;
@@ -744,18 +659,10 @@ textarea.typing-input {
   margin-top: 18px;
 }
 
-/* =========================================================
-   PUZZLES / ACTIVITIES
-   ========================================================= */
-
-#puzzlesScreen,
-#gamesScreen {
-  background: var(--background);
-}
+/* PUZZLES / ACTIVITIES */
 
 .puzzle-card {
   min-width: 0;
-  padding: 24px;
 }
 
 .puzzle-grid {
@@ -768,8 +675,8 @@ textarea.typing-input {
 .tile {
   min-height: 64px;
   padding: 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 15px;
   background: #ffffff;
   color: var(--text);
   font-size: 1.1rem;
@@ -794,13 +701,7 @@ textarea.typing-input {
   box-shadow: var(--focus-ring);
 }
 
-/* =========================================================
-   EDITOR
-   ========================================================= */
-
-#editorScreen {
-  background: var(--background);
-}
+/* EDITOR */
 
 .editor-card {
   padding: 24px;
@@ -821,7 +722,7 @@ textarea.typing-input {
   width: 100%;
   min-height: 220px;
   padding: 18px;
-  border: 1px solid var(--border-strong);
+  border: 1.5px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: #ffffff;
   color: var(--text);
@@ -830,13 +731,7 @@ textarea.typing-input {
   line-height: 1.7;
 }
 
-/* =========================================================
-   SETTINGS
-   ========================================================= */
-
-#settingsScreen {
-  background: var(--background);
-}
+/* SETTINGS */
 
 .settings-card {
   margin-bottom: 18px;
@@ -865,15 +760,7 @@ textarea.typing-input {
   margin: 4px 0 0;
 }
 
-/* =========================================================
-   COMPLETION / RESULTS
-   ========================================================= */
-
-#finalScreen,
-#completionScreen,
-#resultsScreen {
-  background: var(--background);
-}
+/* COMPLETION / RESULTS */
 
 .completion-card {
   width: 100%;
@@ -897,7 +784,7 @@ textarea.typing-input {
   width: 82px;
   height: 82px;
   margin: 0 auto 18px;
-  border-radius: 26px;
+  border-radius: 24px;
   background: var(--success-soft);
   color: var(--success);
   font-size: 2.5rem;
@@ -909,9 +796,7 @@ textarea.typing-input {
   margin-top: 24px;
 }
 
-/* =========================================================
-   STATUS / NOTIFICATIONS
-   ========================================================= */
+/* STATUS / NOTIFICATIONS */
 
 .cloud-status,
 .status,
@@ -928,7 +813,7 @@ textarea.typing-input {
 .alert.success,
 .status.success {
   background: var(--success-soft);
-  border-color: #c5ecda;
+  border-color: #b9e5d1;
   color: #176b50;
 }
 
@@ -936,7 +821,7 @@ textarea.typing-input {
 .alert.warning,
 .status.warning {
   background: var(--warning-soft);
-  border-color: #f3dfb6;
+  border-color: #f0dfb7;
   color: #795317;
 }
 
@@ -944,13 +829,11 @@ textarea.typing-input {
 .alert.error,
 .status.error {
   background: var(--danger-soft);
-  border-color: #f2cbd0;
+  border-color: #efc7cd;
   color: #983c49;
 }
 
-/* =========================================================
-   VIDEO / MEDIA CARDS
-   ========================================================= */
+/* VIDEO / MEDIA CARDS */
 
 .video-grid,
 .media-grid {
@@ -982,9 +865,7 @@ textarea.typing-input {
   margin-top: 0;
 }
 
-/* =========================================================
-   TABLES
-   ========================================================= */
+/* TABLES */
 
 table {
   width: 100%;
@@ -1013,9 +894,7 @@ tr:last-child td {
   border-bottom: 0;
 }
 
-/* =========================================================
-   ACCESSIBILITY
-   ========================================================= */
+/* ACCESSIBILITY */
 
 :focus-visible {
   outline: 3px solid var(--primary);
@@ -1040,17 +919,13 @@ select:focus-visible {
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* =========================================================
-   RESPONSIVE DESIGN
-   Keeps the existing scrolling behavior unchanged.
-   ========================================================= */
+/* RESPONSIVE DESIGN */
 
 @media (max-width: 1200px) {
   main {
@@ -1158,10 +1033,8 @@ select:focus-visible {
   }
 }
 
-/* =========================================================
-   TYPEFLOW — SCREEN NAVIGATION FIX
-   Keep this section so inactive screens stay hidden.
-   ========================================================= */
+/* SCREEN NAVIGATION FIX
+   Keep this behavior unchanged. */
 
 .screen {
   display: none;
@@ -1195,4 +1068,3 @@ select:focus-visible {
 .screen select {
   pointer-events: auto;
 }
-
