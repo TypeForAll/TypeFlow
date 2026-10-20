@@ -2,7 +2,10 @@
 (function () {
   "use strict";
 
-  // TypeFlow: Firebase-backed accounts and a temporary demo account.
+  // =========================================================
+  // TYPEFLOW - FIREBASE AUTHENTICATION + CLOUD PROGRESS
+  // =========================================================
+
   var firebaseConfig = {
     apiKey: "AIzaSyBmV96qc0v1aO3KFRrIQ19kJJms9Usz_Jc",
     authDomain: "typeflow-f2e2e.firebaseapp.com",
@@ -22,7 +25,9 @@
     return;
   }
 
-  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
 
   var auth = firebase.auth();
   var db = firebase.firestore();
@@ -47,7 +52,9 @@
     puzzleShuffled: [],
     authReady: false,
     authBusy: false,
-    demo: false
+    demo: false,
+    deferredInstallPrompt: null,
+    serviceWorkerRegistration: null
   };
 
   var demoAccount = null;
@@ -183,6 +190,7 @@
         "Your progress couldn't sync. Check your internet connection.",
         true
       );
+      throw error;
     });
   }
 
@@ -193,7 +201,7 @@
     if (!isDemo()) {
       saveTimer = setTimeout(function () {
         saveTimer = null;
-        saveAccounts();
+        saveAccounts().catch(function () {});
       }, 350);
     }
   }
@@ -209,6 +217,8 @@
       : createAccount(user, user.displayName || "");
 
     bindSettingsControls();
+    addAccountSettings();
+    addPwaSettings();
 
     var account = currentAccount();
 
@@ -348,6 +358,8 @@
 
     clearMessage();
     bindSettingsControls();
+    addAccountSettings();
+    addPwaSettings();
     updateGreeting();
     renderLessonMenu();
     renderEditor();
@@ -542,7 +554,9 @@
       demoAccount = account;
     } else {
       try {
-        if (user.updateProfile) await user.updateProfile({ displayName: name });
+        if (user.updateProfile) {
+          await user.updateProfile({ displayName: name });
+        }
         await saveAccounts();
       } catch (error) {
         setMessage(authErrorMessage(error), true);
@@ -551,11 +565,116 @@
     }
 
     bindSettingsControls();
+    addAccountSettings();
     updateGreeting();
     renderLessonMenu();
     renderEditor();
     showScreen("homeScreen");
   };
+
+  // Change the display name from Settings after signup.
+  window.saveSettingsDisplayName = async function () {
+    var input = byId("settingsDisplayName");
+    var name = input ? normalizeText(input.value) : "";
+    var user = state.currentUser;
+    var account = currentAccount();
+
+    if (!user || !account) {
+      alert("Please sign in before changing your display name.");
+      return;
+    }
+
+    if (!name) {
+      alert("Please enter a display name.");
+      if (input) input.focus();
+      return;
+    }
+
+    if (name.length > 40) {
+      alert("Your display name must be 40 characters or fewer.");
+      return;
+    }
+
+    var oldName = account.username;
+    account.username = name;
+
+    try {
+      if (!isDemo() && user.updateProfile) {
+        await user.updateProfile({ displayName: name });
+      }
+
+      if (isDemo()) {
+        demoAccount = account;
+      } else {
+        await saveAccounts();
+      }
+
+      updateGreeting();
+
+      var status = byId("settingsNameStatus");
+      if (status) {
+        status.textContent = "Display name saved.";
+      }
+    } catch (error) {
+      account.username = oldName;
+      if (input) input.value = oldName;
+      alert(authErrorMessage(error));
+    }
+  };
+
+  // Add a display-name editor to the existing Settings panel.
+  function findSettingsContainer() {
+    return document.querySelector(
+      "#settingsOverlay .settings-card, " +
+      "#settingsModal .settings-card, " +
+      "#settingsOverlay .settings-content, " +
+      "#settingsModal .settings-content, " +
+      "#settingsOverlay, #settingsModal, " +
+      ".settings-card, .settings-content"
+    );
+  }
+
+  function addAccountSettings() {
+    var container = findSettingsContainer();
+    var account = currentAccount();
+
+    if (!container || !account) return;
+
+    var section = byId("typeflowAccountSettings");
+
+    if (!section) {
+      section = document.createElement("section");
+      section.id = "typeflowAccountSettings";
+      section.style.marginTop = "20px";
+      section.style.paddingTop = "16px";
+      section.style.borderTop = "1px solid #ddd";
+
+      section.innerHTML =
+        '<h3>Account</h3>' +
+        '<label for="settingsDisplayName">Display name</label>' +
+        '<input id="settingsDisplayName" type="text" maxlength="40" ' +
+        'autocomplete="nickname" placeholder="Your display name" ' +
+        'style="display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:10px;">' +
+        '<button id="saveSettingsDisplayName" type="button">Save display name</button>' +
+        '<p id="settingsNameStatus" role="status" aria-live="polite"></p>';
+
+      container.appendChild(section);
+
+      byId("saveSettingsDisplayName").addEventListener("click", function () {
+        window.saveSettingsDisplayName();
+      });
+
+      byId("settingsDisplayName").addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          window.saveSettingsDisplayName();
+        }
+      });
+    }
+
+    var nameInput = byId("settingsDisplayName");
+    if (nameInput) nameInput.value = account.username || "";
+  }
 
   window.logout = async function () {
     if (isDemo()) {
@@ -588,7 +707,6 @@
 
     var typed = input.value;
     var words = typed.trim() ? typed.trim().split(/\s+/).length : 0;
-    var targetWords = lessonText(state.activeLesson).trim().split(/\s+/).length;
     var accuracy = 0;
 
     if (typed.length) {
@@ -614,6 +732,21 @@
 
       var wpm = elapsed > 0 ? Math.round(words / elapsed) : 0;
       wpmElement.textContent = wpm + " WPM";
+    }
+
+    var progress = byId("typeflowProgress");
+    var fill = progress ? progress.querySelector(".progress-fill") : null;
+
+    if (fill) {
+      var targetLength = lessonText(state.activeLesson).length;
+      var percent = targetLength
+        ? Math.min(100, (typed.length / targetLength) * 100)
+        : 0;
+
+      fill.style.width = percent + "%";
+      progress.setAttribute("aria-valuenow", String(Math.round(percent)));
+      progress.setAttribute("aria-valuemin", "0");
+      progress.setAttribute("aria-valuemax", "100");
     }
   }
 
@@ -641,9 +774,13 @@
     bar.className = "progress-bar";
     bar.setAttribute("role", "progressbar");
     bar.setAttribute("aria-label", "Typing progress");
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", "100");
+    bar.setAttribute("aria-valuenow", "0");
     bar.innerHTML = '<div class="progress-fill"></div>';
 
     var sentence = byId("sentence");
+
     if (sentence && sentence.parentNode) {
       sentence.parentNode.insertBefore(bar, sentence.nextSibling);
     } else {
@@ -1177,6 +1314,162 @@
     }
   }
 
+  // =========================================================
+  // PWA INSTALL + SERVICE WORKER UPDATE CONTROLS
+  // =========================================================
+
+  function addPwaSettings() {
+    var container = findSettingsContainer();
+    if (!container || byId("typeflowPwaSettings")) return;
+
+    var section = document.createElement("section");
+    section.id = "typeflowPwaSettings";
+    section.style.marginTop = "20px";
+    section.style.paddingTop = "16px";
+    section.style.borderTop = "1px solid #ddd";
+
+    section.innerHTML =
+      "<h3>App</h3>" +
+      '<button id="typeflowInstallApp" type="button">Install TypeFlow</button>' +
+      '<button id="typeflowCheckUpdate" type="button" style="margin-left:8px">Check for updates</button>' +
+      '<p id="typeflowPwaStatus" role="status" aria-live="polite"></p>';
+
+    container.appendChild(section);
+
+    byId("typeflowInstallApp").addEventListener("click", async function () {
+      if (!state.deferredInstallPrompt) {
+        var status = byId("typeflowPwaStatus");
+
+        if (status) {
+          status.textContent =
+            "Install may not be available in this browser yet. Try the browser's Install or Add to Dock option.";
+        }
+
+        return;
+      }
+
+      state.deferredInstallPrompt.prompt();
+
+      try {
+        await state.deferredInstallPrompt.userChoice;
+      } catch (error) {
+        console.warn("TypeFlow install prompt:", error);
+      }
+
+      state.deferredInstallPrompt = null;
+      updateInstallButton();
+    });
+
+    byId("typeflowCheckUpdate").addEventListener("click", async function () {
+      var status = byId("typeflowPwaStatus");
+
+      if (!("serviceWorker" in navigator)) {
+        if (status) status.textContent = "Service workers aren't supported here.";
+        return;
+      }
+
+      try {
+        if (status) status.textContent = "Checking for updates…";
+
+        var registration = state.serviceWorkerRegistration;
+
+        if (!registration) {
+          registration = await navigator.serviceWorker.getRegistration();
+        }
+
+        if (!registration) {
+          if (status) {
+            status.textContent =
+              "No service worker was found. Check your index.html setup.";
+          }
+          return;
+        }
+
+        await registration.update();
+
+        if (registration.waiting) {
+          if (status) status.textContent = "An update is ready. Reloading…";
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+          return;
+        }
+
+        if (status) {
+          status.textContent =
+            "Update check complete. Reload if a new version was installed.";
+        }
+      } catch (error) {
+        console.error("TypeFlow update check failed:", error);
+
+        if (status) {
+          status.textContent = "Couldn't check for updates. Try again later.";
+        }
+      }
+    });
+
+    updateInstallButton();
+  }
+
+  function updateInstallButton() {
+    var button = byId("typeflowInstallApp");
+    if (!button) return;
+
+    if (window.matchMedia &&
+        window.matchMedia("(display-mode: standalone)").matches) {
+      button.textContent = "TypeFlow is installed";
+      button.disabled = true;
+    } else {
+      button.textContent = state.deferredInstallPrompt
+        ? "Install TypeFlow"
+        : "Install TypeFlow (if available)";
+      button.disabled = false;
+    }
+  }
+
+  window.addEventListener("beforeinstallprompt", function (event) {
+    event.preventDefault();
+    state.deferredInstallPrompt = event;
+    updateInstallButton();
+  });
+
+  window.addEventListener("appinstalled", function () {
+    state.deferredInstallPrompt = null;
+    updateInstallButton();
+
+    var status = byId("typeflowPwaStatus");
+    if (status) status.textContent = "TypeFlow was installed.";
+  });
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+
+    navigator.serviceWorker.register("./service-worker.js")
+      .then(function (registration) {
+        state.serviceWorkerRegistration = registration;
+
+        registration.addEventListener("updatefound", function () {
+          var worker = registration.installing;
+          if (!worker) return;
+
+          worker.addEventListener("statechange", function () {
+            if (
+              worker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              var status = byId("typeflowPwaStatus");
+
+              if (status) {
+                status.textContent =
+                  "A TypeFlow update is ready. Use Check for updates to apply it.";
+              }
+            }
+          });
+        });
+      })
+      .catch(function (error) {
+        console.warn("TypeFlow service worker registration failed:", error);
+      });
+  }
+
   function bindEvents() {
     var input = byId("typingInput");
 
@@ -1188,7 +1481,10 @@
 
         updateTypingStats();
 
-        if (normalizeText(input.value) === normalizeText(lessonText(state.activeLesson))) {
+        if (
+          normalizeText(input.value) ===
+          normalizeText(lessonText(state.activeLesson))
+        ) {
           markLessonComplete(state.activeLesson);
           renderLessonMenu();
 
@@ -1230,6 +1526,7 @@
   function init() {
     bindEvents();
     window.showTab("login");
+    registerServiceWorker();
 
     auth.getRedirectResult().catch(function (error) {
       setMessage(authErrorMessage(error), true);
