@@ -1,5 +1,0 @@
-Copyright (c) 2026 typeforall. All rights reserved.
-
-The source code, design, layout, graphics, and content of TypeFlow are the exclusive intellectual property of typeforall. 
-
-No part of this project may be copied, reproduced, forked, modified, distributed, or hosted publicly or privately without the explicit, prior written permission of the copyright owner.
